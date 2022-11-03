@@ -1101,8 +1101,9 @@ def min_norm_element_from2(v1v1, v1v2, v2v2):
     return gamma.clamp(0, 1)
 
 # veclist shape batch, number, others
-# 方案一, 提取跟diffuison 方向垂直的分量, 将这些分量想办法dynamic化
-# 方案二, 将当前的方案暴力拓展到三个变量的情况
+# 方案一, 三元优化: 将当前的方案暴力拓展到三个变量的情况(必须做clamp, 是否约束主梯度之外的模长, 约束了模长理论上才sound)
+# 方案二, 二元优化: 提取跟diffuison方向垂直的分量, 将这些分量dynamic化(约束或者不约束模长, 理论上都sound)
+# 方案三, 二元优化: 仅约束非主梯度的模长(理论上sound)
 def frank_wolfe_solver(veclist, ep = 1e-4, maxnum = 20):
     shape = veclist.shape
     veclist = veclist.view(shape[0], shape[1], -1) # shape [B, N, O]
@@ -1117,6 +1118,8 @@ def frank_wolfe_solver(veclist, ep = 1e-4, maxnum = 20):
         if th.abs(gamma).mean()< ep:
             return a
     return a
+
+
 
 # 给出基准梯度, 仅保留垂直方向的分量 independdims 表示多少分量是并列的不计入计算的
 def get_vertical_component(vec, vec_base, independdims = 1):

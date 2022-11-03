@@ -64,3 +64,13 @@ This repo is re-implemention of our method on [guided diffusion](https://github.
 
 ## Edit
 mainly edit the gauss_diffusion/gauss_diffusion.py and the scripts/ae_sample.py
+
+
+## For Paper
+* 证明部分
+    * dynamic perspective (是个trivial的体力活)
+        * 一个证明是保证能落在对应噪声的分布上
+        * 多个ref梯度之间是动态merge的
+    * manifold optimization (可行性需要证明, 可能需要修改block adain)
+        * 提出的blockadain用流形优化的formulation写出来
+    * 可以退化到ILVR和EGSDE, 并且给出了相应的稳定性的解释
