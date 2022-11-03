@@ -61,3 +61,6 @@ These are cat-to-dog samples generated with N=32:
 
 ## Note
 This repo is re-implemention of our method on [guided diffusion](https://github.com/openai/guided-diffusion). Our initial implementation of the paper is based on [denoising-diffusion-pytorch](https://github.com/rosinality/denoising-diffusion-pytorch).
+
+## Edit
+mainly edit the gauss_diffusion/gauss_diffusion.py and the scripts/ae_sample.py
