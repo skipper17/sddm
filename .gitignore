@@ -1,0 +1,8 @@
+myoutput/
+.vscode/
+__pycache__/
+models/
+vid/
+gif/
+
+.DS_Store
