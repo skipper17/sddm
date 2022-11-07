@@ -65,12 +65,30 @@ This repo is re-implemention of our method on [guided diffusion](https://github.
 ## Edit
 mainly edit the gauss_diffusion/gauss_diffusion.py and the scripts/ae_sample.py
 
-
+## Contribulation
+* 提出了流形优化的角度统一了对diffusion model统计量的约束
+* 首次将动态梯度结合的算法应用在多energy指导的diffusion model
+* 提出了blockadain模块用于更好地做图形的统计量迁移， 有更高的自由度
 ## For Paper
 * 证明部分
     * dynamic perspective (是个trivial的体力活)
         * 一个证明是保证能落在对应噪声的分布上
         * 多个ref梯度之间是动态merge的
-    * manifold optimization (可行性需要证明, 可能需要修改block adain)
-        * 提出的blockadain用流形优化的formulation写出来
+    * manifold optimization (可行性已经完成证明, 只剩下trivial的体力活. 不需要修改block adain)
+        * 提出的blockadain用流形优化的formulation写出来, 已完成, 是$S^{n-2}$的超球
     * 可以退化到ILVR和EGSDE, 并且给出了相应的稳定性的解释
+        * 做一阶统计量迁移就是ILVR, 抛弃ILVR仅仅使用energy且放弃dynamic的合并方案就是EGSDE
+        * EGSDE的专家系统理解, 如果能迁移证明要迁移证明
+
+## TODO
+* 实验部分
+    * 框架代码的实现
+    * 框架代码的调参
+    * 实验的设计和结果
+
+* 理论部分
+    * 确定证明要采用的符号并熟悉相关语言, 需要考虑之前工作的连续性
+    * 确定要证明的点和框架
+    * 按照上一章节的内容补充证明框架
+
+* 撰写论文
