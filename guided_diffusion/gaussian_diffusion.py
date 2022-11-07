@@ -949,10 +949,15 @@ def calc_mean_std(feat, eps=1e-5):
     return feat_mean, feat_std
 
 
-def adaptive_instance_normalization(content_feat, style_feat):
-    assert (content_feat.size()[:-2] == style_feat.size()[:-2])
+def adaptive_instance_normalization(content_feat, style_feat = None, is_simplied = False, style_mean = None, style_std = None):
     size = content_feat.size()
-    style_mean, style_std = calc_mean_std(style_feat)
+    if not is_simplied:
+        assert style_feat is not None
+        assert (content_feat.size()[:-2] == style_feat.size()[:-2])
+        style_mean, style_std = calc_mean_std(style_feat)
+    else:
+        assert style_mean is not None
+        assert style_std is not None
     content_mean, content_std = calc_mean_std(content_feat)
 
     normalized_feat = (content_feat - content_mean.expand(
@@ -1131,3 +1136,24 @@ def get_vertical_component(vec, vec_base, independdims = 1):
     cos = (vec * vec_base).sum(dim = -1, keepdim = True) / (vec_base ** 2).sum(dim = -1, keepdim = True)
     vec_align = cos * vec_base
     return (vec - vec_align).view(shape)
+
+# 实现提取sub manifold分量的算法, 通过做两次垂直分量的提取来实现
+# img 当前时间步的图像
+# ref 对应的参考的均值和方差
+#
+def apply_gradient(img, refmean, delta, blocknum = 8):
+    assert img.shape == delta.shape
+    assert img.device == refmean.device == delta.device
+    blockedimg = blockzation(img, blocknum)
+    blockeddelta = blockzation(delta, blocknum)
+    meanvec = th.ones(blockedimg.shape).to(blockedimg.device)
+    middledelta = get_vertical_component(blockeddelta, meanvec, -2)
+    finaldelta = get_vertical_component(middledelta, blockedimg - refmean, -2)
+    return img + unblockzation(finaldelta)
+
+def retraction(img, refmean, refstd, blocknum = 8, isStrong = False):
+    assert img.device == refmean.device == refstd.device
+    block_img = blockzation(img, blocknum)
+    block_restractioned = adaptive_instance_normalization(block_img, is_simplied= True, style_mean=refmean, style_std=refstd)
+
+    return unblockzation(block_restractioned)

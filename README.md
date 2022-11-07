@@ -93,3 +93,10 @@ mainly edit the gauss_diffusion/gauss_diffusion.py and the scripts/ae_sample.py
     * 按照上一章节的内容补充证明框架
 
 * 撰写论文 在一个月内完成初版
+
+## 流程
+* 给定ref image, 首先根据block 统计量采样一个gauss noise 并映射到对应的约束上
+* 之后循环 t:
+    * 获得混合的梯度g
+    * 得到在切平面上的投影
+    * normalize化
