@@ -100,3 +100,8 @@ mainly edit the gauss_diffusion/gauss_diffusion.py and the scripts/ae_sample.py
     * 获得混合的梯度g
     * 得到在切平面上的投影
     * normalize化
+
+## useful bash command
+``` python
+ python scripts/ae_sample.py  --attention_resolutions 16 --class_cond False --diffusion_steps 1000 --dropout 0.0 --image_size 256 --learn_sigma True --noise_schedule linear --num_channels 128 --num_head_channels 64 --num_res_blocks 1 --resblock_updown True --use_fp16 False --use_scale_shift_norm True --timestep_respacing 100 --model_path models/afhq_dog_4m.pt --base_samples /home/sunsk/data/afhq_v2/test/cat  --range_t 40 --save_dir myoutput/tmp2neural
+```
