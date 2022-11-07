@@ -79,6 +79,7 @@ mainly edit the gauss_diffusion/gauss_diffusion.py and the scripts/ae_sample.py
     * 可以退化到ILVR和EGSDE, 并且给出了相应的稳定性的解释
         * 做一阶统计量迁移就是ILVR, 抛弃ILVR仅仅使用energy且放弃dynamic的合并方案就是EGSDE
         * EGSDE的专家系统理解, 如果能迁移证明要迁移证明
+    * 考虑流形约束和梯度的串联效应
 
 ## TODO
 * 实验部分 在20天内完成
