@@ -61,9 +61,10 @@ def main():
     # if args.use_fp16:
     #     stagevgg.convert_to_fp16()
     stagevgg.eval()
-    path = "/home/sunsk/Models/resnet50/resnet50-19c8e357.pth"
-    cosmodel = models.resnet50(pretrained=False)
-    cosmodel.load_state_dict(th.load(path))
+    # path = "/home/sunsk/Models/resnet50/resnet50-19c8e357.pth"
+    # path = "/home/sunsk/Models/resnet50/resnet50-0676ba61.pth"
+    cosmodel = models.resnet50(pretrained=True)
+    # cosmodel.load_state_dict(th.load(path))
     cosmodel = th.nn.Sequential(*(list(cosmodel.children())[:5])).to(dist_util.dev()) # replace with better neural model for similarity
     cosmodel.eval()
     cos = th.nn.CosineSimilarity(dim = 1, eps = 1e-6).to(dist_util.dev())

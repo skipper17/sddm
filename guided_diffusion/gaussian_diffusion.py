@@ -1141,7 +1141,7 @@ def get_vertical_component(vec, vec_base, independdims = 1):
 # img 当前时间步的图像
 # ref 对应的参考的均值和方差
 #
-def apply_gradient(img, refmean, delta, blocknum = 8):
+def divide_gradient(img, delta, refmean, blocknum = 16):
     assert img.shape == delta.shape
     assert img.device == refmean.device == delta.device
     blockedimg = blockzation(img, blocknum)
@@ -1149,9 +1149,11 @@ def apply_gradient(img, refmean, delta, blocknum = 8):
     meanvec = th.ones(blockedimg.shape).to(blockedimg.device)
     middledelta = get_vertical_component(blockeddelta, meanvec, -2)
     finaldelta = get_vertical_component(middledelta, blockedimg - refmean, -2)
-    return img + unblockzation(finaldelta)
+    resdelta = blockeddelta - finaldelta
+    
+    return unblockzation(finaldelta), unblockzation(resdelta)
 
-def retraction(img, refmean, refstd, blocknum = 8, isStrong = False):
+def retraction(img, refmean, refstd, blocknum = 16, isStrong = False):
     assert img.device == refmean.device == refstd.device
     block_img = blockzation(img, blocknum)
     block_restractioned = adaptive_instance_normalization(block_img, is_simplied= True, style_mean=refmean, style_std=refstd)
