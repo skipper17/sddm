@@ -82,10 +82,13 @@ mainly edit the gauss_diffusion/gauss_diffusion.py and the scripts/ae_sample.py
     * 考虑流形约束和梯度的串联效应
 
 ## TODO
-* 实验部分 在20天内完成
+* 实验部分 在21天内完成
     * 框架代码的实现
     * 框架代码的调参
     * 实验的设计和结果
+        * 验证流形迁移梯度的重要性
+        * 跟之前方法的FID等实验的对比
+        * 各个时间步流形分布的验证
 
 * 理论部分 在10天内完成
     * 确定证明要采用的符号并熟悉相关语言, 需要考虑之前工作的连续性
@@ -95,13 +98,19 @@ mainly edit the gauss_diffusion/gauss_diffusion.py and the scripts/ae_sample.py
 * 撰写论文 在一个月内完成初版
 
 ## 流程
-* 给定ref image, 首先根据block 统计量采样一个gauss noise 并映射到对应的约束上
-* 之后循环 t:
-    * 获得混合的梯度g
-    * 得到在切平面上的投影
-    * normalize化
+* 给定ref image, 首先根据block统计量采样一个gauss noise 并映射到流形M_{T}上
+* 之后循环 t: T ~ 1:
+    * 获得Diffusion的梯度g_d, 分解为子流形切空间的分量g_{d1}, 和剩余的与之垂直的分量g_{d2}
+    * 通过Frank Wolfe算法做流形内梯度的合并, 更新生成的目标
+    * 映射回流形M_{t}
+    * 使用流形迁移梯度g_{d2}和blockadain将其映射到流形M_{t-1}
 
 ## useful bash command
 ``` python
- python scripts/ae_sample.py  --attention_resolutions 16 --class_cond False --diffusion_steps 1000 --dropout 0.0 --image_size 256 --learn_sigma True --noise_schedule linear --num_channels 128 --num_head_channels 64 --num_res_blocks 1 --resblock_updown True --use_fp16 False --use_scale_shift_norm True --timestep_respacing 100 --model_path models/afhq_dog_4m.pt --base_samples /home/sunsk/data/afhq_v2/test/cat  --range_t 40 --save_dir myoutput/tmp2neural
+# 运行实验程序
+python scripts/ae_sample.py  --attention_resolutions 16 --class_cond False --diffusion_steps 1000 --dropout 0.0 --image_size 256 --learn_sigma True --noise_schedule linear --num_channels 128 --num_head_channels 64 --num_res_blocks 1 --resblock_updown True --use_fp16 False --use_scale_shift_norm True --timestep_respacing 100 --model_path models/afhq_dog_4m.pt --base_samples /home/sunsk/data/afhq_v2/test/cat  --range_t 40 --save_dir myoutput/tmp2neural
+
+# 运行fid的测试
+python -m pytorch_fid ~/data/afhq_v2/test/dog/ ~/Projects/mycond_adm/myoutput/test/ --device cuda:1
 ```
+
