@@ -69,6 +69,7 @@ def main():
     cosmodel.eval()
     cos = th.nn.CosineSimilarity(dim = 1, eps = 1e-6).to(dist_util.dev())
 
+    # 提供多个梯度
     def cond_fn(x, t, ref_img=None):
         assert ref_img is not None
         batchsize = x.shape[0]
@@ -105,6 +106,7 @@ def main():
     while count * args.batch_size < args.num_samples:
         model_kwargs = next(data)
         model_kwargs = {k: v.to(dist_util.dev()) for k, v in model_kwargs.items()}
+        # to calculate the mean and var, in shape of [batch, channel, blocknum, blocknum, 1 , 1]
         sample = diffusion.p_sample_loop(
             model,
             (args.batch_size, 3, args.image_size, args.image_size),

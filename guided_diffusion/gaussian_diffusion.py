@@ -207,6 +207,21 @@ class GaussianDiffusion:
             * noise
         )
 
+    def q_sample_sta(self, mean, var, t):
+        """
+        get the corresponding mean and variance for a given number of diffusion steps.
+
+        :param t: the number of diffusion steps (minus 1). Here, 0 means one step.
+        :param mean: the mean of the ref img.
+        :param var: the var of the ref img.
+        :return: the corresponding mean and var of the ref img in time t.
+        """
+        assert mean.shape == var.shape
+        a = _extract_into_tensor(self.sqrt_alphas_cumprod, t, mean.shape)
+        b = _extract_into_tensor(self.sqrt_one_minus_alphas_cumprod, t, var.shape)
+
+        return a * mean, a ** 2 * var + b ** 2
+
     def q_posterior_mean_variance(self, x_start, x_t, t):
         """
         Compute the mean and variance of the diffusion posterior:
@@ -554,7 +569,7 @@ class GaussianDiffusion:
                     cond_fn=cond_fn,
                     model_kwargs=model_kwargs,
                 )
-                #### ILVR ####
+                #### ILVR #### 做blockadain ,lazy version
                 # if resizers is not None:
                 if i > range_t:
                     # out["sample"] = out["sample"] - up(down(out["sample"])) + up(
@@ -1131,11 +1146,11 @@ def get_vertical_component(vec, vec_base, independdims = 1):
     assert vec.shape  == vec_base.shape
     assert vec.device == vec_base.device
     shape = vec.shape
-    vec = vec.view(*shape[:independdims], -1)
-    vec_base = vec_base.view(*shape[:independdims], -1)
+    vec = vec.reshape(*shape[:independdims], -1)
+    vec_base = vec_base.reshape(*shape[:independdims], -1)
     cos = (vec * vec_base).sum(dim = -1, keepdim = True) / (vec_base ** 2).sum(dim = -1, keepdim = True)
     vec_align = cos * vec_base
-    return (vec - vec_align).view(shape)
+    return (vec - vec_align).reshape(shape)
 
 # 实现提取sub manifold分量的算法, 通过做两次垂直分量的提取来实现
 # img 当前时间步的图像
