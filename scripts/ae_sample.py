@@ -79,7 +79,7 @@ def main():
             x_in = x.detach().requires_grad_(True)
             y_feat = stagevgg(ref_img)
             x_feat = stagevgg(x_in)
-            target_feat = block_adaIN(x_feat, y_feat, blocknum=1)
+            target_feat = block_adaIN(x_feat, y_feat, blocknum=args.area)
             gap = (x_feat - target_feat) ** 2
 
             ## original image feature
@@ -90,8 +90,8 @@ def main():
             #deepfeature1 = cosmodel(x_in)
             #deepfeature2 = cosmodel(ref_img)
             #grad2 = batchsize * th.autograd.grad(cos(deepfeature1, deepfeature2).mean(), x_in)[0] * args.classifier_scale
-            grad = th.autograd.grad(gap.sum(), x_in)[0] * args.classifier_scale
-            return -grad#, grad2
+            grad = th.autograd.grad(gap.sum(), x_in)[0] #* args.classifier_scale
+            return [-grad]#, grad2
 
     logger.log("loading data...")
     data = load_reference(
@@ -106,6 +106,7 @@ def main():
     while count * args.batch_size < args.num_samples:
         model_kwargs = next(data)
         model_kwargs = {k: v.to(dist_util.dev()) for k, v in model_kwargs.items()}
+        model_kwargs["area"] = args.area
         # to calculate the mean and var, in shape of [batch, channel, blocknum, blocknum, 1 , 1]
         sample = diffusion.p_sample_loop(
             model,

@@ -381,12 +381,26 @@ class GaussianDiffusion:
         """
         # if model_kwargs is not None and "ref_img" in model_kwargs:
         #     model_kwargs["ref_img"] = self.q_sample(model_kwargs["ref_img"], t, 0)
-        gradient = cond_fn(x, self._scale_timesteps(t), **model_kwargs)
+        assert model_kwargs is not None
+        assert "ref_img" in model_kwargs
+        assert "ref_mean" in model_kwargs
+        assert "ref_std" in model_kwargs
 
         if t[0] > 50:
+            gradients = cond_fn(x, self._scale_timesteps(t), model_kwargs["ref_img"]) # tuple or list
+            mean_t, var_t = self.q_sample_sta(model_kwargs["ref_mean"], model_kwargs["ref_std"] ** 2, t)
+            std_t = np.sqrt(var_t)
+            for i in len(gradients):
+                gradients[i], _ = divide_gradient(x,gradients[i], mean_t, model_kwargs["area"])
+                gradients[i] = gradients[i] * p_mean_var["variance"]
+            dg = (p_mean_var["mean"] - x).float() # the grad diffusion gives
+            dg_m, dg_o = divide_gradient(x, dg, mean_t, model_kwargs["area"])
+            gradients = th.stack([dg_m, *gradients], 1)
+            gradient = frank_wolfe_solver(gradients)
+
             new_mean = (
                 # p_mean_var["mean"].float() + p_mean_var["variance"] * gradient.float() # EDIT
-                dynamic_adj_add(p_mean_var["mean"].float(),p_mean_var["variance"] * gradient.float())
+                (x + dg_o + gradient).float()
                 # p_mean_var["mean"].float()
             )
         else:
@@ -546,6 +560,7 @@ class GaussianDiffusion:
             img = noise
         else:
             img = th.randn(*shape, device=device)
+        ## Here to do Normalize
         indices = list(range(self.num_timesteps))[::-1]
 
         if progress:
@@ -574,7 +589,10 @@ class GaussianDiffusion:
                 if i > range_t:
                     # out["sample"] = out["sample"] - up(down(out["sample"])) + up(
                     #     down(self.q_sample(model_kwargs["ref_img"], t, th.randn(*shape, device=device))))
-                    out["sample"] = block_adaIN(out["sample"],self.q_sample(model_kwargs["ref_img"], t, th.randn(*shape, device=device)), blocknum=16)
+                    # out["sample"] = block_adaIN(out["sample"],self.q_sample(model_kwargs["ref_img"], t, th.randn(*shape, device=device)), blocknum=16)
+                    ref_mean, ref_var = self.q_sample_sta(model_kwargs["ref_mean"], model_kwargs["ref_std"] ** 2, t - 1)
+                    ref_std = np.sqrt(ref_var)
+                    out["sample"] = block_adaIN(out["sample"], is_simplied= True, style_mean=ref_mean, style_std=ref_std)
 
                 yield out
                 img = out["sample"]
@@ -990,11 +1008,17 @@ def adaptive_instance_normalization(content_feat, style_feat = None, is_simplied
 #                                         style_feat.reshape(N,C,H // block, block, W // block, block).transpose(3,4)
 #                                         ).transpose(3,4).reshape(size)
 
-def block_adaIN(content_feat, style_feat, blocknum = 16):
-    assert (content_feat.size()[:-2] == style_feat.size()[:-2])
-    content_feat = blockzation(content_feat, blocknum)
-    style_feat = blockzation(style_feat, blocknum)
-    return  unblockzation(adaptive_instance_normalization(content_feat, style_feat))
+def block_adaIN(content_feat, style_feat = None, blocknum = 16, is_simplied = False, style_mean = None, style_std = None):
+    if not is_simplied:
+        assert (content_feat.size()[:-2] == style_feat.size()[:-2])
+        content_feat = blockzation(content_feat, blocknum)
+        style_feat = blockzation(style_feat, blocknum)
+        return  unblockzation(adaptive_instance_normalization(content_feat, style_feat))
+    else:
+        assert style_mean is not None
+        assert style_std is not None
+        content_feat = blockzation(content_feat, blocknum)
+        return unblockzation(adaptive_instance_normalization(content_feat, is_simplied=True, style_mean=style_mean, style_std=style_std))
 
 def blockzation(feat, blocknum = 16):
     H, W = feat.size()[-2:]
@@ -1124,6 +1148,7 @@ def min_norm_element_from2(v1v1, v1v2, v2v2):
 # 方案一, 三元优化: 将当前的方案暴力拓展到三个变量的情况(必须做clamp, 是否约束主梯度之外的模长, 约束了模长理论上才sound)
 # 方案二, 二元优化: 提取跟diffuison方向垂直的分量, 将这些分量dynamic化(约束或者不约束模长, 理论上都sound)
 # 方案三, 二元优化: 仅约束非主梯度的模长(理论上sound)
+# 上述方案abandoned, 采用流形来分割梯度, 自由结合即可
 def frank_wolfe_solver(veclist, ep = 1e-4, maxnum = 20):
     shape = veclist.shape
     veclist = veclist.view(shape[0], shape[1], -1) # shape [B, N, O]
@@ -1136,8 +1161,8 @@ def frank_wolfe_solver(veclist, ep = 1e-4, maxnum = 20):
         # minvec = th.diagonal(veclist[:,minrank]).transpose(0,1)
         a = (1-gamma)* a + gamma * minonehot
         if th.abs(gamma).mean()< ep:
-            return a
-    return a
+            return (a @ veclist).view(shape[0], shape[2:])
+    return (a @ veclist).view(shape[0], shape[2:])
 
 
 
@@ -1156,6 +1181,8 @@ def get_vertical_component(vec, vec_base, independdims = 1):
 # img 当前时间步的图像
 # ref 对应的参考的均值和方差
 #
+# return: 
+## 沿着流形的分量, 流形外的分量
 def divide_gradient(img, delta, refmean, blocknum = 16):
     assert img.shape == delta.shape
     assert img.device == refmean.device == delta.device
@@ -1168,7 +1195,7 @@ def divide_gradient(img, delta, refmean, blocknum = 16):
     
     return unblockzation(finaldelta), unblockzation(resdelta)
 
-def retraction(img, refmean, refstd, blocknum = 16, isStrong = False):
+def retraction(img, refmean, refstd, blocknum = 16):
     assert img.device == refmean.device == refstd.device
     block_img = blockzation(img, blocknum)
     block_restractioned = adaptive_instance_normalization(block_img, is_simplied= True, style_mean=refmean, style_std=refstd)
