@@ -86,11 +86,15 @@ mainly edit the gauss_diffusion/gauss_diffusion.py and the scripts/ae_sample.py
     * 框架代码的实现
     * 框架代码的调参
     * 实验的设计和结果
+        * 以下实验使用cat2dog 或者 male2female
         * 验证流形迁移梯度的重要性(数据实验)来说明这样的分割是科学的 自我对照
             * 计算流形迁移梯度的模长
 
         * 使用动态梯度合并和不使用的对比, 来说明这样的算法是有效的 自我对照
-        
+
+        * 不同block大小的对比, 梯度合并是否按block分割的对比 不同时间步的对比 自我对照
+
+        * 以下实验使用多个数据集
         * 跟之前方法 score的方法 (主要是SDEDIT, ILVR, EGSDE, 还有gan based的方法) 实验的对比
             * 指标有FID, ssim, psnr, l2
 
