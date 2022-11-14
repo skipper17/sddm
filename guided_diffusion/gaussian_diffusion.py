@@ -401,11 +401,19 @@ class GaussianDiffusion:
             for i in range(len(gradients)):
                 gradients[i], _ = divide_gradient(x,gradients[i], mean_t, condition_kwargs["area"])
                 gradients[i] = gradients[i] * p_mean_var["variance"]
-            dg = (p_mean_var["mean"] - x).float() # the grad diffusion gives
-            dg_m, dg_o = divide_gradient(x, dg, mean_t, condition_kwargs["area"])
-            gradients = th.stack([dg_m, *gradients], 1)
-            gradient = frank_wolfe_solver(gradients)
+                if condition_kwargs["detail_merge"]:
+                    gradients[i] = blockzation(gradients[i], condition_kwargs["area"])
 
+            dg = (p_mean_var["mean"] - x).float() # the grad diffusion gives
+            dg_m, dg_o = divide_gradient(x, dg, mean_t, condition_kwargs["area"]) 
+
+            if not condition_kwargs["detail_merge"]:
+                gradients = th.stack([dg_m, *gradients], -3) # batch, channel, number, h, w
+                gradient = frank_wolfe_solver(gradients, ind_dim=2)
+            else:
+                gradients = th.stack([blockzation(dg_m, condition_kwargs["area"]), *gradients], -3)  # batch, channel, block, block, number, h/block, w/block
+                gradient = unblockzation(frank_wolfe_solver(gradients,ind_dim=4))
+                
             new_mean = (
                 # p_mean_var["mean"].float() + p_mean_var["variance"] * gradient.float() # EDIT
                 (x + dg_o + gradient).float()
@@ -1154,25 +1162,25 @@ def min_norm_element_from2(v1v1, v1v2, v2v2):
     gamma = th.where(th.isnan(gamma), th.full_like(gamma, 1), gamma)
     return gamma.clamp(0, 1)
 
-# veclist shape batch, number, others
+# veclist shape :  batch1, batch2, ..., batchn, number, others
 # 方案一, 三元优化: 将当前的方案暴力拓展到三个变量的情况(必须做clamp, 是否约束主梯度之外的模长, 约束了模长理论上才sound)
 # 方案二, 二元优化: 提取跟diffuison方向垂直的分量, 将这些分量dynamic化(约束或者不约束模长, 理论上都sound)
 # 方案三, 二元优化: 仅约束非主梯度的模长(理论上sound)
 # 上述方案abandoned, 采用流形来分割梯度, 自由结合即可
-def frank_wolfe_solver(veclist, ep = 1e-4, maxnum = 20):
+def frank_wolfe_solver(veclist, ep = 1e-4, maxnum = 20, ind_dim=1):
     shape = veclist.shape
-    veclist = veclist.view(shape[0], shape[1], -1) # shape [B, N, O]
-    M = veclist @ veclist.transpose(1,2) # shape [B, N, N]
-    a = (th.ones(shape[:2]) / shape[1]).unsqueeze(1).to(veclist.device) # shape [B, 1, N]
+    veclist = veclist.view(*shape[:ind_dim+1], -1) # shape [B, N, O]
+    M = veclist @ veclist.transpose(-1,-2) # shape [B, N, N]
+    a = (th.ones(shape[:ind_dim+1]) / shape[ind_dim]).unsqueeze(ind_dim).to(veclist.device) # shape [B, 1, N]
     for _ in range(maxnum):
-        minrank = th.argmin(a @ M, dim = 2) # shape [B, 1]
-        minonehot = th.zeros(shape[:2]).to(veclist.device).scatter_(1, minrank, 1).unsqueeze(1) # shape [B, 1, N]
-        gamma = min_norm_element_from2(minonehot @ M @ minonehot.transpose(1,2),minonehot @ M @ a.transpose(1,2), a @ M @ a.transpose(1,2)).reshape(-1, 1, 1)
+        minrank = th.argmin(a @ M, dim = ind_dim+1) # shape [B, 1]
+        minonehot = th.zeros(shape[:ind_dim+1]).to(veclist.device).scatter_(ind_dim, minrank, 1).unsqueeze(ind_dim) # shape [B, 1, N]
+        gamma = min_norm_element_from2(minonehot @ M @ minonehot.transpose(-1,-2),minonehot @ M @ a.transpose(-1,-2), a @ M @ a.transpose(-1,-2)).reshape(*shape[:ind_dim], 1, 1)
         # minvec = th.diagonal(veclist[:,minrank]).transpose(0,1)
         a = (1-gamma)* a + gamma * minonehot
         if th.abs(gamma).mean()< ep:
-            return (a @ veclist).view(shape[0], *shape[2:])
-    return (a @ veclist).view(shape[0], *shape[2:])
+            return (a @ veclist).view(*shape[:ind_dim], *shape[ind_dim+1:])
+    return (a @ veclist).view(*shape[:ind_dim], *shape[ind_dim+1:])
 
 
 

@@ -111,6 +111,7 @@ def main():
             condition_kwargs["ref_mean"], condition_kwargs["ref_std"] = calc_mean_std(blockzation(model_kwargs["ref_img"], args.area))
             condition_kwargs["area"] = args.area
             condition_kwargs["range_t"] = args.range_t
+            condition_kwargs["detail_merge"] = args.detail_merge
         # to calculate the mean and var, in shape of [batch, channel, blocknum, blocknum, 1 , 1]
         sample = diffusion.p_sample_loop(
             model,
@@ -156,6 +157,7 @@ def create_argparser():
         affine = False, # keep image features affine
         losstype = "KL", # "MSE" or "KL"
         init_with_blockadain = True,
+        detail_merge=False,
         )
     defaults.update(model_and_diffusion_defaults())
     parser = argparse.ArgumentParser()
