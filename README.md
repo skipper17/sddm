@@ -121,4 +121,14 @@ python scripts/ae_sample.py  --attention_resolutions 16 --class_cond False --dif
 # 运行fid的测试
 python -m pytorch_fid ~/data/afhq_v2/test/dog/ ~/Projects/mycond_adm/myoutput/test/ --device cuda:1
 ```
+## 运行的stack
+```
+main()
+p_sample_loop()
+p_sample_loop_progressive() # 遍历t,  go one step and remap
+p_sample()
+    p_mean_variance() # 调用model, 得到均值和方差
 
+    condition_mean() # 计算条件均值和方差
+
+```

@@ -396,7 +396,7 @@ class GaussianDiffusion:
         if t[0] > 50:
             gradients = cond_fn(x, self._scale_timesteps(t), model_kwargs["ref_img"]) # tuple or list
             mean_t, var_t = self.q_sample_sta(model_kwargs["ref_mean"], model_kwargs["ref_std"] ** 2, t)
-            std_t = np.sqrt(var_t)
+            
             for i in len(gradients):
                 gradients[i], _ = divide_gradient(x,gradients[i], mean_t, model_kwargs["area"])
                 gradients[i] = gradients[i] * p_mean_var["variance"]
