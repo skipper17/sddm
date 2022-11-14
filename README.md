@@ -134,6 +134,7 @@ p_sample()
 ```
 ## 当前的实验结果
 * init5016, channel未分离, block未分离 最佳的007单图生成效果, fid 67.3
-* init4008, channel 为分离, block 未分离, fid  61.986270817953766
+* init4008, channel 为分离, block 未分离, fid 61.986270817953766
 * test, 4008 channel分离, block未分离, fid 59.30798526167143
-* test_detail_merge channel分离, block分离, fid
+* test_detail_merge 4008 channel分离, block分离, fid 62.80453053222314
+* all5016, channel, block分离 fid  66.95015589862345
