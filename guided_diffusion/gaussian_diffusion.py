@@ -274,12 +274,12 @@ class GaussianDiffusion:
 
         B, C = x.shape[:2]
         assert t.shape == (B,)
-        for v,k in model_kwargs.items():
-            print(v)
-            try:
-                print(k.shape)
-            except AttributeError:
-                print(k)
+        # for v,k in model_kwargs.items():
+        #     print(v)
+        #     try:
+        #         print(k.shape)
+        #     except AttributeError:
+        #         print(k)
 
         model_output = model(x, self._scale_timesteps(t), **model_kwargs)
 
@@ -395,10 +395,10 @@ class GaussianDiffusion:
         assert "ref_std" in condition_kwargs
 
         if t[0] > condition_kwargs["range_t"]:
-            gradients = cond_fn(x, self._scale_timesteps(t), model_kwargs["ref_img"]) # tuple or list
+            gradients = cond_fn(x, self._scale_timesteps(t), ref_img=model_kwargs["ref_img"]) # tuple or list
             mean_t, var_t = self.q_sample_sta(condition_kwargs["ref_mean"], condition_kwargs["ref_std"] ** 2, t)
 
-            for i in len(gradients):
+            for i in range(len(gradients)):
                 gradients[i], _ = divide_gradient(x,gradients[i], mean_t, condition_kwargs["area"])
                 gradients[i] = gradients[i] * p_mean_var["variance"]
             dg = (p_mean_var["mean"] - x).float() # the grad diffusion gives
@@ -601,7 +601,7 @@ class GaussianDiffusion:
                     #     down(self.q_sample(model_kwargs["ref_img"], t, th.randn(*shape, device=device))))
                     # out["sample"] = block_adaIN(out["sample"],self.q_sample(model_kwargs["ref_img"], t, th.randn(*shape, device=device)), blocknum=16)
                     ref_mean, ref_var = self.q_sample_sta(condition_kwargs["ref_mean"], condition_kwargs["ref_std"] ** 2, t - 1)
-                    ref_std = np.sqrt(ref_var)
+                    ref_std = th.sqrt(ref_var)
                     out["sample"] = block_adaIN(out["sample"], is_simplied= True, style_mean=ref_mean, style_std=ref_std, blocknum=condition_kwargs["area"])
 
                 yield out
@@ -1171,8 +1171,8 @@ def frank_wolfe_solver(veclist, ep = 1e-4, maxnum = 20):
         # minvec = th.diagonal(veclist[:,minrank]).transpose(0,1)
         a = (1-gamma)* a + gamma * minonehot
         if th.abs(gamma).mean()< ep:
-            return (a @ veclist).view(shape[0], shape[2:])
-    return (a @ veclist).view(shape[0], shape[2:])
+            return (a @ veclist).view(shape[0], *shape[2:])
+    return (a @ veclist).view(shape[0], *shape[2:])
 
 
 
