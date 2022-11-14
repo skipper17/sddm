@@ -413,7 +413,7 @@ class GaussianDiffusion:
             else:
                 gradients = th.stack([blockzation(dg_m, condition_kwargs["area"]), *gradients], -3)  # batch, channel, block, block, number, h/block, w/block
                 gradient = unblockzation(frank_wolfe_solver(gradients,ind_dim=4))
-                
+
             new_mean = (
                 # p_mean_var["mean"].float() + p_mean_var["variance"] * gradient.float() # EDIT
                 (x + dg_o + gradient).float()
@@ -578,6 +578,7 @@ class GaussianDiffusion:
         else:
             img = th.randn(*shape, device=device)
         ## Here to do Normalize
+        img = adaptive_instance_normalization(img, is_simplied=True, style_mean=th.zeros(1, device=device), style_std=th.ones(1, device=device))
         indices = list(range(self.num_timesteps))[::-1]
 
         if progress:
