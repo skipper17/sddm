@@ -11,7 +11,7 @@ import torch as th
 import torch.distributed as dist
 import torch.nn.functional as F
 
-from guided_diffusion.gaussian_diffusion import StageVGG, block_adaIN, dynamic_adj_add
+from guided_diffusion.gaussian_diffusion import StageVGG, block_adaIN, calc_mean_std, blockzation
 from guided_diffusion import dist_util, logger
 from guided_diffusion.script_util import (
     model_and_diffusion_defaults,
@@ -106,16 +106,20 @@ def main():
     while count * args.batch_size < args.num_samples:
         model_kwargs = next(data)
         model_kwargs = {k: v.to(dist_util.dev()) for k, v in model_kwargs.items()}
-        model_kwargs["area"] = args.area
+        condition_kwargs = {}
+        if "ref_img" in model_kwargs.keys():
+            condition_kwargs["ref_mean"], condition_kwargs["ref_std"] = calc_mean_std(blockzation(model_kwargs["ref_img"], args.area))
+            condition_kwargs["area"] = args.area
+            condition_kwargs["range_t"] = args.range_t
         # to calculate the mean and var, in shape of [batch, channel, blocknum, blocknum, 1 , 1]
         sample = diffusion.p_sample_loop(
             model,
             (args.batch_size, 3, args.image_size, args.image_size),
             clip_denoised=args.clip_denoised,
             model_kwargs=model_kwargs,
+            condition_kwargs=condition_kwargs,
             cond_fn=cond_fn,
-            device=dist_util.dev(),
-            range_t=args.range_t
+            device=dist_util.dev()
         )
 
         for i in range(args.batch_size):

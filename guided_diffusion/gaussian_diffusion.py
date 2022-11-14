@@ -377,7 +377,7 @@ class GaussianDiffusion:
             return t.float() * (1000.0 / self.num_timesteps)
         return t
 
-    def condition_mean(self, cond_fn, p_mean_var, x, t, model_kwargs=None):
+    def condition_mean(self, cond_fn, p_mean_var, x, t, model_kwargs=None, condition_kwargs=None):
         """
         Compute the mean for the previous step, given a function cond_fn that
         computes the gradient of a conditional log probability with respect to
@@ -389,19 +389,20 @@ class GaussianDiffusion:
         # if model_kwargs is not None and "ref_img" in model_kwargs:
         #     model_kwargs["ref_img"] = self.q_sample(model_kwargs["ref_img"], t, 0)
         assert model_kwargs is not None
+        assert condition_kwargs is not None
         assert "ref_img" in model_kwargs
-        assert "ref_mean" in model_kwargs
-        assert "ref_std" in model_kwargs
+        assert "ref_mean" in condition_kwargs
+        assert "ref_std" in condition_kwargs
 
-        if t[0] > 50:
+        if t[0] > condition_kwargs["range_t"]:
             gradients = cond_fn(x, self._scale_timesteps(t), model_kwargs["ref_img"]) # tuple or list
-            mean_t, var_t = self.q_sample_sta(model_kwargs["ref_mean"], model_kwargs["ref_std"] ** 2, t)
-            
+            mean_t, var_t = self.q_sample_sta(condition_kwargs["ref_mean"], condition_kwargs["ref_std"] ** 2, t)
+
             for i in len(gradients):
-                gradients[i], _ = divide_gradient(x,gradients[i], mean_t, model_kwargs["area"])
+                gradients[i], _ = divide_gradient(x,gradients[i], mean_t, condition_kwargs["area"])
                 gradients[i] = gradients[i] * p_mean_var["variance"]
             dg = (p_mean_var["mean"] - x).float() # the grad diffusion gives
-            dg_m, dg_o = divide_gradient(x, dg, mean_t, model_kwargs["area"])
+            dg_m, dg_o = divide_gradient(x, dg, mean_t, condition_kwargs["area"])
             gradients = th.stack([dg_m, *gradients], 1)
             gradient = frank_wolfe_solver(gradients)
 
@@ -447,6 +448,7 @@ class GaussianDiffusion:
         denoised_fn=None,
         cond_fn=None,
         model_kwargs=None,
+        condition_kwargs=None,
     ):
         """
         Sample x_{t-1} from the model at the given timestep.
@@ -479,7 +481,7 @@ class GaussianDiffusion:
         )  # no noise when t == 0
         if cond_fn is not None:
             out["mean"] = self.condition_mean(
-                cond_fn, out, x, t, model_kwargs=model_kwargs
+                cond_fn, out, x, t, model_kwargs=model_kwargs, condition_kwargs=condition_kwargs
             )
             # out["mean"] = cond_fn(out["mean"], self._scale_timesteps(t), **model_kwargs)
         sample = out["mean"] + nonzero_mask * th.exp(0.5 * out["log_variance"]) * noise
@@ -494,10 +496,10 @@ class GaussianDiffusion:
         denoised_fn=None,
         cond_fn=None,
         model_kwargs=None,
+        condition_kwargs=None,
         device=None,
         progress=False,
         resizers=None,
-        range_t=0,
     ):
         """
         Generate samples from the model.
@@ -527,10 +529,10 @@ class GaussianDiffusion:
             denoised_fn=denoised_fn,
             cond_fn=cond_fn,
             model_kwargs=model_kwargs,
+            condition_kwargs=condition_kwargs,
             device=device,
             progress=progress,
             resizers=resizers,
-            range_t=range_t,
         ):
             final = sample
 
@@ -547,10 +549,10 @@ class GaussianDiffusion:
         denoised_fn=None,
         cond_fn=None,
         model_kwargs=None,
+        condition_kwargs=None,
         device=None,
         progress=False,
         resizers=None,
-        range_t=0,
     ):
         """
         Generate samples from the model and yield intermediate samples from
@@ -590,16 +592,17 @@ class GaussianDiffusion:
                     denoised_fn=denoised_fn,
                     cond_fn=cond_fn,
                     model_kwargs=model_kwargs,
+                    condition_kwargs=condition_kwargs,
                 )
                 #### ILVR #### 做blockadain ,lazy version
                 # if resizers is not None:
-                if i > range_t:
+                if i > condition_kwargs["range_t"]:
                     # out["sample"] = out["sample"] - up(down(out["sample"])) + up(
                     #     down(self.q_sample(model_kwargs["ref_img"], t, th.randn(*shape, device=device))))
                     # out["sample"] = block_adaIN(out["sample"],self.q_sample(model_kwargs["ref_img"], t, th.randn(*shape, device=device)), blocknum=16)
-                    ref_mean, ref_var = self.q_sample_sta(model_kwargs["ref_mean"], model_kwargs["ref_std"] ** 2, t - 1)
+                    ref_mean, ref_var = self.q_sample_sta(condition_kwargs["ref_mean"], condition_kwargs["ref_std"] ** 2, t - 1)
                     ref_std = np.sqrt(ref_var)
-                    out["sample"] = block_adaIN(out["sample"], is_simplied= True, style_mean=ref_mean, style_std=ref_std)
+                    out["sample"] = block_adaIN(out["sample"], is_simplied= True, style_mean=ref_mean, style_std=ref_std, blocknum=condition_kwargs["area"])
 
                 yield out
                 img = out["sample"]
