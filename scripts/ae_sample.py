@@ -54,7 +54,7 @@ def main():
         model.convert_to_fp16()
     model.eval()
 
-    logger.log("loading energe_guidance...")
+    logger.log("loading energy_guidance...")
     stagevgg = StageVGG()
 
     stagevgg.to(dist_util.dev())
@@ -79,7 +79,7 @@ def main():
             x_in = x.detach().requires_grad_(True)
             y_feat = stagevgg(ref_img)
             x_feat = stagevgg(x_in)
-            target_feat = block_adaIN(x_feat, y_feat, blocknum=args.area // 2)
+            target_feat = block_adaIN(x_feat, y_feat, blocknum=args.area)
             gap = (x_feat - target_feat) ** 2
 
             ## original image feature
