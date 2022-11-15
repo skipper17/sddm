@@ -116,10 +116,10 @@ mainly edit the gauss_diffusion/gauss_diffusion.py and the scripts/ae_sample.py
 ## useful bash command
 ``` python
 # 运行实验程序
-python scripts/ae_sample.py  --attention_resolutions 16 --class_cond False --diffusion_steps 1000 --dropout 0.0 --image_size 256 --learn_sigma True --noise_schedule linear --num_channels 128 --num_head_channels 64 --num_res_blocks 1 --resblock_updown True --use_fp16 False --use_scale_shift_norm True --timestep_respacing 100 --model_path models/afhq_dog_4m.pt --base_samples /home/sunsk/data/afhq_v2/test/cat  --range_t 40 --save_dir myoutput/tmp2neural
+python scripts/ae_sample.py  --attention_resolutions 16 --class_cond False --diffusion_steps 1000 --dropout 0.0 --image_size 256 --learn_sigma True --noise_schedule linear --num_channels 128 --num_head_channels 64 --num_res_blocks 1 --resblock_updown True --use_fp16 False --use_scale_shift_norm True --timestep_respacing 100 --model_path models/afhq_dog_4m.pt --base_samples /home/sunsk/data/afhq/val/cat  --range_t 50 --area 32 --detail_merge False --save_dir myoutput/allnod5032
 
 # 运行fid的测试
-python -m pytorch_fid ~/data/afhq_v2/test/dog/ ~/Projects/mycond_adm/myoutput/test/ --device cuda:1
+python -m pytorch_fid ~/data/afhq/val/dog/ ~/Projects/mycond_adm/myoutput/test/ --device cuda:1
 ```
 ## 运行的stack
 ```
@@ -133,8 +133,9 @@ p_sample()
 
 ```
 ## 当前的实验结果
-* init5016, channel未分离, block未分离 最佳的007单图生成效果, fid 67.3
-* init4008, channel 为分离, block 未分离, fid 61.986270817953766
+* init5016, channel未分离, block未分离 最佳的007单图生成效果, fid 66.57101766681214
+* init4008, channel 为分离, block 未分离, fid  61.640536273287154
 * test, 4008 channel分离, block未分离, fid 59.30798526167143
 * test_detail_merge 4008 channel分离, block分离, fid 62.80453053222314
-* all5016, channel, block分离 fid  66.95015589862345
+* all5016, channel, block分离 fid  66.17780041173941
+* 能量函数用更大的block

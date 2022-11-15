@@ -79,7 +79,7 @@ def main():
             x_in = x.detach().requires_grad_(True)
             y_feat = stagevgg(ref_img)
             x_feat = stagevgg(x_in)
-            target_feat = block_adaIN(x_feat, y_feat, blocknum=args.area)
+            target_feat = block_adaIN(x_feat, y_feat, blocknum=args.area // 2)
             gap = (x_feat - target_feat) ** 2
 
             ## original image feature
