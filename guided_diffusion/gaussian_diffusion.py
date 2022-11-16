@@ -397,7 +397,7 @@ class GaussianDiffusion:
         if t[0] > condition_kwargs["range_t"]:
             gradients = cond_fn(x, self._scale_timesteps(t), ref_img=model_kwargs["ref_img"]) # tuple or list
             mean_t, var_t = self.q_sample_sta(condition_kwargs["ref_mean"], condition_kwargs["ref_std"] ** 2, t)
-
+            std_t = th.sqrt(var_t)
             for i in range(len(gradients)):
                 gradients[i], _ = divide_gradient(x,gradients[i], mean_t, condition_kwargs["area"])
                 gradients[i] = gradients[i] * p_mean_var["variance"]
@@ -413,10 +413,19 @@ class GaussianDiffusion:
             else:
                 gradients = th.stack([blockzation(dg_m, condition_kwargs["area"]), *gradients], -3)  # batch, channel, block, block, number, h/block, w/block
                 gradient = unblockzation(frank_wolfe_solver(gradients,ind_dim=4))
+            
+            # sub-mainfold_t restore
+            middle = block_adaIN(x+gradient, is_simplied=True, style_mean=mean_t, style_std=std_t, blocknum=condition_kwargs["area"])
+            # middle = x + gradient
 
+            # sub-mainfold_{t-1} restore
+            # ref_mean, ref_var = self.q_sample_sta(condition_kwargs["ref_mean"], condition_kwargs["ref_std"] ** 2, t - 1)
+            # ref_std = th.sqrt(ref_var)
+            # final = block_adaIN(middle+dg_o, is_simplied= True, style_mean=ref_mean, style_std=ref_std, blocknum=condition_kwargs["area"])
+            final = middle+dg_o
             new_mean = (
                 # p_mean_var["mean"].float() + p_mean_var["variance"] * gradient.float() # EDIT
-                (x + dg_o + gradient).float()
+                final.float()
                 # p_mean_var["mean"].float()
             )
         else:
@@ -577,8 +586,8 @@ class GaussianDiffusion:
             img = noise
         else:
             img = th.randn(*shape, device=device)
-        ## Here to do Normalize
-        img = adaptive_instance_normalization(img, is_simplied=True, style_mean=th.zeros(1, device=device), style_std=th.ones(1, device=device))
+        # # Here to do Normalize
+        # img = adaptive_instance_normalization(img, is_simplied=True, style_mean=th.zeros(1, device=device), style_std=th.ones(1, device=device))
         indices = list(range(self.num_timesteps))[::-1]
 
         if progress:
@@ -603,15 +612,15 @@ class GaussianDiffusion:
                     model_kwargs=model_kwargs,
                     condition_kwargs=condition_kwargs,
                 )
-                #### ILVR #### 做blockadain ,lazy version
-                # if resizers is not None:
-                if i > condition_kwargs["range_t"]:
-                    # out["sample"] = out["sample"] - up(down(out["sample"])) + up(
-                    #     down(self.q_sample(model_kwargs["ref_img"], t, th.randn(*shape, device=device))))
-                    # out["sample"] = block_adaIN(out["sample"],self.q_sample(model_kwargs["ref_img"], t, th.randn(*shape, device=device)), blocknum=16)
-                    ref_mean, ref_var = self.q_sample_sta(condition_kwargs["ref_mean"], condition_kwargs["ref_std"] ** 2, t - 1)
-                    ref_std = th.sqrt(ref_var)
-                    out["sample"] = block_adaIN(out["sample"], is_simplied= True, style_mean=ref_mean, style_std=ref_std, blocknum=condition_kwargs["area"])
+                # #### ILVR #### 做blockadain ,lazy version
+                # # if resizers is not None:
+                # if i > condition_kwargs["range_t"]:
+                #     # out["sample"] = out["sample"] - up(down(out["sample"])) + up(
+                #     #     down(self.q_sample(model_kwargs["ref_img"], t, th.randn(*shape, device=device))))
+                #     # out["sample"] = block_adaIN(out["sample"],self.q_sample(model_kwargs["ref_img"], t, th.randn(*shape, device=device)), blocknum=16)
+                #     ref_mean, ref_var = self.q_sample_sta(condition_kwargs["ref_mean"], condition_kwargs["ref_std"] ** 2, t - 1)
+                #     ref_std = th.sqrt(ref_var)
+                #     out["sample"] = block_adaIN(out["sample"], is_simplied= True, style_mean=ref_mean, style_std=ref_std, blocknum=condition_kwargs["area"])
 
                 yield out
                 img = out["sample"]

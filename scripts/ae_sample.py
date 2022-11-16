@@ -86,12 +86,12 @@ def main():
             # target = block_adaIN(x_in, ref_img, blocknum=1)
             # gap = (x_in - target) ** 2
 
-            ## cos similarity
-            #deepfeature1 = cosmodel(x_in)
-            #deepfeature2 = cosmodel(ref_img)
-            #grad2 = batchsize * th.autograd.grad(cos(deepfeature1, deepfeature2).mean(), x_in)[0] * args.classifier_scale
-            grad = th.autograd.grad(gap.sum(), x_in)[0] #* args.classifier_scale
-            return [-grad]#, grad2
+            # # cos similarity
+            # deepfeature1 = cosmodel(x_in)
+            # deepfeature2 = cosmodel(ref_img)
+            # grad2 = batchsize * th.autograd.grad(cos(deepfeature1, deepfeature2).mean(), x_in)[0] * args.classifier_scale
+            grad = th.autograd.grad(gap.sum(), x_in)[0] * args.classifier_scale
+            return [-grad]#, grad2]
 
     logger.log("loading data...")
     data = load_reference(
@@ -151,7 +151,7 @@ def create_argparser():
         base_samples="",
         model_path="",
         save_dir="",
-        classifier_scale=4e-2,
+        classifier_scale=1,
         vggdepth = 1,
         area = 16,
         affine = False, # keep image features affine
