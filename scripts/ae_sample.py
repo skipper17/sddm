@@ -40,7 +40,7 @@ def main():
     args = create_argparser().parse_args()
 
     dist_util.setup_dist()
-    logger.configure(dir=args.save_dir)
+    logger.configure(dir="myoutput/")
 
     logger.log("creating model and diffusion...")
     model, diffusion = create_model_and_diffusion(
