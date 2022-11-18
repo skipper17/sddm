@@ -4,5 +4,5 @@ __pycache__/
 models/
 vid/
 gif/
-data/
+data
 .DS_Store
