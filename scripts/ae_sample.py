@@ -41,6 +41,8 @@ def main():
 
     dist_util.setup_dist()
     logger.configure(dir="myoutput/")
+    
+    os.makedirs(os.path.expanduser(args.save_dir), exist_ok=True)
 
     logger.log("creating model and diffusion...")
     model, diffusion = create_model_and_diffusion(
@@ -124,7 +126,7 @@ def main():
         )
 
         for i in range(args.batch_size):
-            out_path = os.path.join(logger.get_dir(),
+            out_path = os.path.join(args.save_dir,
                                     f"{str(count * args.batch_size + i).zfill(5)}.png")
             utils.save_image(
                 sample[i].unsqueeze(0),
