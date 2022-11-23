@@ -411,7 +411,7 @@ class GaussianDiffusion:
             # print(dg_o.norm())
             # print(t[0])
             # print(((dg_o.reshape(dg_o.shape[0],-1) ** 2).sum(dim = -1) / (dg.reshape(dg.shape[0],-1) ** 2).sum(dim = -1)).mean())
-            
+
             if not condition_kwargs["detail_merge"]:
                 gradients = th.stack([dg_m, *gradients], -3) # batch, channel, number, h, w
                 gradient = frank_wolfe_solver(gradients, ind_dim=2)
@@ -427,7 +427,7 @@ class GaussianDiffusion:
             # ref_mean, ref_var = self.q_sample_sta(condition_kwargs["ref_mean"], condition_kwargs["ref_std"] ** 2, t - 1)
             # ref_std = th.sqrt(ref_var)
             # final = block_adaIN(middle+dg_o, is_simplied= True, style_mean=ref_mean, style_std=ref_std, blocknum=condition_kwargs["area"])
-            final = middle+dg_o
+            final = middle + dg_o
             new_mean = (
                 # p_mean_var["mean"].float() + p_mean_var["variance"] * gradient.float() # EDIT
                 final.float()
