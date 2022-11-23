@@ -406,7 +406,12 @@ class GaussianDiffusion:
 
             dg = (p_mean_var["mean"] - x).float() # the grad diffusion gives
             dg_m, dg_o = divide_gradient(x, dg, mean_t, condition_kwargs["area"]) 
-
+            # #print diffusion gradient in sub-manifold and other part 
+            # print(dg_m.norm())
+            # print(dg_o.norm())
+            # print(t[0])
+            # print(((dg_o.reshape(dg_o.shape[0],-1) ** 2).sum(dim = -1) / (dg.reshape(dg.shape[0],-1) ** 2).sum(dim = -1)).mean())
+            
             if not condition_kwargs["detail_merge"]:
                 gradients = th.stack([dg_m, *gradients], -3) # batch, channel, number, h, w
                 gradient = frank_wolfe_solver(gradients, ind_dim=2)
@@ -415,8 +420,8 @@ class GaussianDiffusion:
                 gradient = unblockzation(frank_wolfe_solver(gradients,ind_dim=4))
             
             # sub-mainfold_t restore
-            middle = block_adaIN(x+gradient, is_simplied=True, style_mean=mean_t, style_std=std_t, blocknum=condition_kwargs["area"])
-            # middle = x + gradient
+            # middle = block_adaIN(x+gradient, is_simplied=True, style_mean=mean_t, style_std=std_t, blocknum=condition_kwargs["area"])
+            middle = x + gradient
 
             # sub-mainfold_{t-1} restore
             # ref_mean, ref_var = self.q_sample_sta(condition_kwargs["ref_mean"], condition_kwargs["ref_std"] ** 2, t - 1)
@@ -612,15 +617,15 @@ class GaussianDiffusion:
                     model_kwargs=model_kwargs,
                     condition_kwargs=condition_kwargs,
                 )
-                # #### ILVR #### 做blockadain ,lazy version
-                # # if resizers is not None:
-                # if i > condition_kwargs["range_t"]:
-                #     # out["sample"] = out["sample"] - up(down(out["sample"])) + up(
-                #     #     down(self.q_sample(model_kwargs["ref_img"], t, th.randn(*shape, device=device))))
-                #     # out["sample"] = block_adaIN(out["sample"],self.q_sample(model_kwargs["ref_img"], t, th.randn(*shape, device=device)), blocknum=16)
-                #     ref_mean, ref_var = self.q_sample_sta(condition_kwargs["ref_mean"], condition_kwargs["ref_std"] ** 2, t - 1)
-                #     ref_std = th.sqrt(ref_var)
-                #     out["sample"] = block_adaIN(out["sample"], is_simplied= True, style_mean=ref_mean, style_std=ref_std, blocknum=condition_kwargs["area"])
+                #### ILVR #### 做blockadain ,lazy version
+                # if resizers is not None:
+                if i > condition_kwargs["range_t"]:
+                    # out["sample"] = out["sample"] - up(down(out["sample"])) + up(
+                    #     down(self.q_sample(model_kwargs["ref_img"], t, th.randn(*shape, device=device))))
+                    # out["sample"] = block_adaIN(out["sample"],self.q_sample(model_kwargs["ref_img"], t, th.randn(*shape, device=device)), blocknum=16)
+                    ref_mean, ref_var = self.q_sample_sta(condition_kwargs["ref_mean"], condition_kwargs["ref_std"] ** 2, t - 1)
+                    ref_std = th.sqrt(ref_var)
+                    out["sample"] = block_adaIN(out["sample"], is_simplied= True, style_mean=ref_mean, style_std=ref_std, blocknum=condition_kwargs["area"])
 
                 yield out
                 img = out["sample"]

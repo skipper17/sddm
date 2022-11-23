@@ -5,7 +5,7 @@ if __name__ == '__main__':
     task = 'cat2dog'
 
     if task == 'cat2dog':
-        translate_path = 'myoutput/all5016_restore'
+        translate_path = 'myoutput/all2016_nomanifold'
         source_path = 'data/afhq/val/cat'
         gt_path = 'data/afhq/val/dog'
         fid_l2_psnr_ssim(task, translate_path, source_path, gt_path)
