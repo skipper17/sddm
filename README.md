@@ -79,7 +79,6 @@ mainly edit the gauss_diffusion/gauss_diffusion.py and the scripts/ae_sample.py
     * 可以退化到ILVR和EGSDE, 并且给出了相应的稳定性的解释
         * 做一阶统计量迁移就是ILVR, 抛弃ILVR仅仅使用energy且放弃dynamic的合并方案就是EGSDE
         * EGSDE的专家系统理解, 如果能迁移证明要迁移证明
-    * 考虑流形约束和梯度的串联效应
 
 ## TODO
 * 实验部分 在21天内完成
@@ -116,8 +115,13 @@ mainly edit the gauss_diffusion/gauss_diffusion.py and the scripts/ae_sample.py
 ## useful bash command
 ``` python
 # 运行实验程序
-python scripts/ae_sample.py  --attention_resolutions 16 --class_cond False --diffusion_steps 1000 --dropout 0.0 --image_size 256 --learn_sigma True --noise_schedule linear --num_channels 128 --num_head_channels 64 --num_res_blocks 1 --resblock_updown True --use_fp16 False --use_scale_shift_norm True --timestep_respacing 100 --model_path models/afhq_dog_4m.pt --base_samples /home/sunsk/data/afhq/val/cat  --range_t 50 --area 32 --detail_merge False --save_dir myoutput/allnod5032
+python scripts/ae_sample.py  --attention_resolutions 16 --class_cond False --diffusion_steps 1000 --dropout 0.0 --image_size 256 --learn_sigma False --noise_schedule linear --num_channels 128 --num_head_channels 64 --num_res_blocks 2 --resblock_updown True --use_fp16 False --use_scale_shift_norm True --timestep_respacing 100 --model_path models/afhq.pt --base_samples /home/sunsk/Projects/mycond_adm/data/celeba_hq/val/male --range_t 52 --area 16 --detail_merge False --save_dir myoutput/20230122/celebahq/all5216_1_2
 
+# 开光的
+python scripts/ae_sample.py  --attention_resolutions 16 --class_cond False --diffusion_steps 1000 --dropout 0.0 --image_size 256 --learn_sigma True --noise_schedule linear --num_channels 128 --num_head_channels 64 --num_res_blocks 1 --resblock_updown True --use_fp16 False --use_scale_shift_norm True --timestep_respacing 100 --model_path models/afhq_dog_4m.pt --base_samples /home/sunsk/data/afhq/val/cat  --range_t 52 --area 16 --detail_merge False --save_dir myoutput/20230122/all5216_new5
+
+
+CUDA_VISIBLE_DEVICES=1 python scripts/ae_sample.py  --attention_resolutions 16 --class_cond False --diffusion_steps 1000 --dropout 0.0 --image_size 256 --learn_sigma False --noise_schedule linear --num_channels 128  --num_res_blocks 1 --resblock_updown True  --use_fp16 False --use_scale_shift_norm True --timestep_respacing 100 --model_path models/celebahq_female_ddpm.pth --base_samples /home/sunsk/Projects/mycond_adm/data/celeba_hq/val/male --range_t 52 --area 16 --detail_merge False --save_dir myoutput/20230122/celebahq/xxxx2 --diffusionmodel DDPM
 # 运行fid的测试
 python -m pytorch_fid ~/data/afhq/val/dog/ ~/Projects/mycond_adm/myoutput/test/ --device cuda:1
 ```

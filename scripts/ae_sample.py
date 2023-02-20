@@ -10,8 +10,11 @@ import numpy as np
 import torch as th
 import torch.distributed as dist
 import torch.nn.functional as F
+from tool.utils import dict2namespace
+import yaml
 
 from guided_diffusion.gaussian_diffusion import StageVGG, block_adaIN, calc_mean_std, blockzation
+from guided_diffusion.ddpm import Model
 from guided_diffusion import dist_util, logger
 from guided_diffusion.script_util import (
     model_and_diffusion_defaults,
@@ -21,7 +24,6 @@ from guided_diffusion.script_util import (
 )
 from guided_diffusion.image_datasets import load_data
 from torchvision import utils, models
-import math
 
 # added
 def load_reference(data_dir, batch_size, image_size, class_cond=False):
@@ -48,10 +50,22 @@ def main():
     model, diffusion = create_model_and_diffusion(
         **args_to_dict(args, model_and_diffusion_defaults().keys())
     )
-    model.load_state_dict(
-        dist_util.load_state_dict(args.model_path, map_location="cpu")
-    )
-    model.to(dist_util.dev())
+    if args.diffusionmodel == 'DDPM':
+        with open("guided_diffusion/ddpm.yml", "r") as f:
+            config_ = yaml.safe_load(f)
+        config = dict2namespace(config_)
+        # config.device = th.device('cuda') if th.cuda.is_available() else th.device('cpu')
+        model = Model(config)
+        model.to(dist_util.dev())
+        model = th.nn.DataParallel(model)
+        states = th.load(args.model_path)
+        model.load_state_dict(states, strict=True)
+        print("load success")
+    else:
+        model.load_state_dict(
+            dist_util.load_state_dict(args.model_path, map_location="cpu")
+        )
+        model.to(dist_util.dev())
     if args.use_fp16:
         model.convert_to_fp16()
     model.eval()
@@ -71,7 +85,7 @@ def main():
     cosmodel.eval()
     cos = th.nn.CosineSimilarity(dim = 1, eps = 1e-6).to(dist_util.dev())
 
-    # 提供多个梯度
+    # supply simple gradients
     def cond_fn(x, t, ref_img=None):
         assert ref_img is not None
         batchsize = x.shape[0]
@@ -146,7 +160,7 @@ def main():
 def create_argparser():
     defaults = dict(
         clip_denoised=True,
-        num_samples=500,
+        num_samples=1000,
         batch_size=4,
         range_t=0,
         use_ddim=False,
@@ -160,6 +174,7 @@ def create_argparser():
         losstype = "KL", # "MSE" or "KL"
         init_with_blockadain = True,
         detail_merge=False,
+        diffusionmodel="ADM",
         )
     defaults.update(model_and_diffusion_defaults())
     parser = argparse.ArgumentParser()
