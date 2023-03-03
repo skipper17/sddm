@@ -152,6 +152,8 @@ class GaussianDiffusion:
         self.sqrt_recip_alphas_cumprod = np.sqrt(1.0 / self.alphas_cumprod)
         self.sqrt_recipm1_alphas_cumprod = np.sqrt(1.0 / self.alphas_cumprod - 1)
 
+        self.sqrt_recip_alphas = np.sqrt(1.0 / alphas)
+        self.weight_energy = self.betas / np.sqrt(alphas)
         # calculations for posterior q(x_{t-1} | x_t, x_0)
         self.posterior_variance = (
             betas * (1.0 - self.alphas_cumprod_prev) / (1.0 - self.alphas_cumprod)
@@ -377,7 +379,7 @@ class GaussianDiffusion:
             return t.float() * (1000.0 / self.num_timesteps)
         return t
 
-    def condition_mean(self, cond_fn, p_mean_var, x, t, model_kwargs=None, condition_kwargs=None):
+    def condition_mean(self, cond_fn, p_mean_var, x, t, model_kwargs=None, condition_kwargs=None, onManifold=False):
         """
         Compute the mean for the previous step, given a function cond_fn that
         computes the gradient of a conditional log probability with respect to
@@ -395,39 +397,51 @@ class GaussianDiffusion:
         assert "ref_std" in condition_kwargs
 
         if t[0] > condition_kwargs["range_t"]:
-            gradients = cond_fn(x, self._scale_timesteps(t), ref_img=model_kwargs["ref_img"]) # tuple or list
+
             mean_t, var_t = self.q_sample_sta(condition_kwargs["ref_mean"], condition_kwargs["ref_std"] ** 2, t)
             std_t = th.sqrt(var_t)
+            f = _extract_into_tensor(self.sqrt_recip_alphas, t, x.shape) * x - x
+            dg = (p_mean_var["mean"] - _extract_into_tensor(self.sqrt_recip_alphas, t, x.shape) * x).float() # the grad diffusion gives
+            dg_m, dg_o = divide_gradient(x, dg, mean_t, condition_kwargs["area"]) 
+            
+            gradients = cond_fn(x, self._scale_timesteps(t), ref_img=model_kwargs["ref_img"]) # tuple or list
+
             for i in range(len(gradients)):
                 gradients[i], _ = divide_gradient(x,gradients[i], mean_t, condition_kwargs["area"])
-                gradients[i] = gradients[i] * p_mean_var["variance"]
+                # gradients[i] = gradients[i] * p_mean_var["variance"]
+                gradients[i] = gradients[i] * _extract_into_tensor(self.weight_energy, t, x.shape) / gradients[i].norm(dim=[2,3],keepdim= True) * dg_m.norm(dim=[2,3], keepdim= True) * 25
                 if condition_kwargs["detail_merge"]:
                     gradients[i] = blockzation(gradients[i], condition_kwargs["area"])
+            
 
-            dg = (p_mean_var["mean"] - x).float() # the grad diffusion gives
-            dg_m, dg_o = divide_gradient(x, dg, mean_t, condition_kwargs["area"]) 
             # #print diffusion gradient in sub-manifold and other part 
+            # print(t[0])
             # print(dg_m.norm())
             # print(dg_o.norm())
-            # print(t[0])
-            # print(((dg_o.reshape(dg_o.shape[0],-1) ** 2).sum(dim = -1) / (dg.reshape(dg.shape[0],-1) ** 2).sum(dim = -1)).mean())
 
+            # print(f.norm())
+            # print((dg_o+f).norm())
+            # print(gradients[0].norm())
+            # print((dg_m * f).sum())
+            # print(((dg_o.reshape(dg_o.shape[0],-1) ** 2).sum(dim = -1) / (dg.reshape(dg.shape[0],-1) ** 2).sum(dim = -1)).mean())
             if not condition_kwargs["detail_merge"]:
-                gradients = th.stack([dg_m, *gradients], -3) # batch, channel, number, h, w
+                gradients = th.stack([dg_m , *gradients], -3) # batch, channel, number, h, w
                 gradient = frank_wolfe_solver(gradients, ind_dim=2)
             else:
                 gradients = th.stack([blockzation(dg_m, condition_kwargs["area"]), *gradients], -3)  # batch, channel, block, block, number, h/block, w/block
                 gradient = unblockzation(frank_wolfe_solver(gradients,ind_dim=4))
-            
+            # gradient = dg_m + gradients[0]
             # sub-mainfold_t restore
             # middle = block_adaIN(x+gradient, is_simplied=True, style_mean=mean_t, style_std=std_t, blocknum=condition_kwargs["area"])
-            middle = x + gradient
+            middle = x + gradient * 2
 
+            if onManifold:
+                return block_adaIN(middle, is_simplied= True, style_mean=mean_t, style_std=std_t, blocknum=condition_kwargs["area"])
             # sub-mainfold_{t-1} restore
-            # ref_mean, ref_var = self.q_sample_sta(condition_kwargs["ref_mean"], condition_kwargs["ref_std"] ** 2, t - 1)
+            # ref_mean, ref_var = self.q_sample_sta(condition_kwargs["ref_mean"], condition_kwargs["ref_std"] ** 2, t)
             # ref_std = th.sqrt(ref_var)
             # final = block_adaIN(middle+dg_o, is_simplied= True, style_mean=ref_mean, style_std=ref_std, blocknum=condition_kwargs["area"])
-            final = middle + dg_o
+            final = middle + dg_o + f
             new_mean = (
                 # p_mean_var["mean"].float() + p_mean_var["variance"] * gradient.float() # EDIT
                 final.float()
@@ -502,6 +516,21 @@ class GaussianDiffusion:
             (t != 0).float().view(-1, *([1] * (len(x.shape) - 1)))
         )  # no noise when t == 0
         if cond_fn is not None:
+            # last time refine 10 times
+            if  t[0] == condition_kwargs["range_t"] + 1:
+                for refinetimes in range(4):
+                    out = self.p_mean_variance(
+                            model,
+                            x,
+                            t,
+                            clip_denoised=clip_denoised,
+                            denoised_fn=denoised_fn,
+                            model_kwargs=model_kwargs,
+                        )
+                    x = self.condition_mean(
+                        cond_fn, out, x, t, model_kwargs=model_kwargs, condition_kwargs=condition_kwargs
+                    )    
+
             out["mean"] = self.condition_mean(
                 cond_fn, out, x, t, model_kwargs=model_kwargs, condition_kwargs=condition_kwargs
             )
@@ -1025,7 +1054,7 @@ def adaptive_instance_normalization(content_feat, style_feat = None, is_simplied
         assert style_mean is not None
         assert style_std is not None
     content_mean, content_std = calc_mean_std(content_feat)
-
+    # return content_feat - content_mean.expand(size) + style_mean.expand(size)
     normalized_feat = (content_feat - content_mean.expand(
         size)) / content_std.expand(size)
     return normalized_feat * style_std.expand(size) + style_mean.expand(size)
