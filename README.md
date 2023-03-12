@@ -118,10 +118,13 @@ mainly edit the gauss_diffusion/gauss_diffusion.py and the scripts/ae_sample.py
 python scripts/ae_sample.py  --attention_resolutions 16 --class_cond False --diffusion_steps 1000 --dropout 0.0 --image_size 256 --learn_sigma False --noise_schedule linear --num_channels 128 --num_head_channels 64 --num_res_blocks 2 --resblock_updown True --use_fp16 False --use_scale_shift_norm True --timestep_respacing 100 --model_path models/afhq.pt --base_samples /home/sunsk/Projects/mycond_adm/data/celeba_hq/val/male --range_t 52 --area 16 --detail_merge False --save_dir myoutput/20230122/celebahq/all5216_1_2
 
 # 开光的
-python scripts/ae_sample.py  --attention_resolutions 16 --class_cond False --diffusion_steps 1000 --dropout 0.0 --image_size 256 --learn_sigma True --noise_schedule linear --num_channels 128 --num_head_channels 64 --num_res_blocks 1 --resblock_updown True --use_fp16 False --use_scale_shift_norm True --timestep_respacing 100 --model_path models/afhq_dog_4m.pt --base_samples /home/sunsk/data/afhq/val/cat  --range_t 52 --area 16 --detail_merge False --save_dir myoutput/20230122/all5216_new5
+python scripts/ae_sample.py  --attention_resolutions 16 --class_cond False --diffusion_steps 1000 --dropout 0.0 --image_size 256 --learn_sigma True --noise_schedule linear --num_channels 128 --num_head_channels 64 --num_res_blocks 1 --resblock_updown True --use_fp16 False --use_scale_shift_norm True --timestep_respacing 100 --model_path /home/sunsk/Models/diffusion/afhq_dog_4m.pt --base_samples /home/data/afhq/val/cat  --range_t 52 --area 16 --detail_merge False --save_dir myoutput/temp
 
 
-CUDA_VISIBLE_DEVICES=1 python scripts/ae_sample.py  --attention_resolutions 16 --class_cond False --diffusion_steps 1000 --dropout 0.0 --image_size 256 --learn_sigma False --noise_schedule linear --num_channels 128  --num_res_blocks 1 --resblock_updown True  --use_fp16 False --use_scale_shift_norm True --timestep_respacing 100 --model_path models/celebahq_female_ddpm.pth --base_samples /home/sunsk/Projects/mycond_adm/data/celeba_hq/val/male --range_t 52 --area 16 --detail_merge False --save_dir myoutput/20230122/celebahq/xxxx2 --diffusionmodel DDPM
+CUDA_VISIBLE_DEVICES=4 python scripts/ae_sample.py  --attention_resolutions 16 --class_cond False --diffusion_steps 1000 --dropout 0.0 --image_size 256 --learn_sigma False --noise_schedule linear --num_channels 128  --num_res_blocks 1 --resblock_updown True  --use_fp16 False --use_scale_shift_norm True --timestep_respacing 100 --model_path models/celebahq_female_ddpm.pth --base_samples /home/sunsk/Projects/mycond_adm/data/celeba_hq/val/male --range_t 52 --area 16 --detail_merge False --save_dir myoutput/20230122/celebahq/xxxx2 --diffusionmodel DDPM
+
+CUDA_VISIBLE_DEVICES=4 python scripts/ae_sample.py  --attention_resolutions 16 --class_cond False --diffusion_steps 1000 --dropout 0.0 --image_size 256 --learn_sigma False --noise_schedule linear --num_channels 128 --num_head_channels 64 --num_res_blocks 1 --resblock_updown True --use_fp16 False --use_scale_shift_norm True --model_path /home/sunsk/Models/diffusion/celebahq_female_ddpm.pth --base_samples /home/data/celeba_hq/val/male/  --range_t 550 --area 16 --detail_merge False --save_dir myoutput/male2female/550_100_40_1p5 --diffusionmodel DDPM
+
 # 运行fid的测试
 python -m pytorch_fid ~/data/afhq/val/dog/ ~/Projects/mycond_adm/myoutput/test/ --device cuda:1
 ```
@@ -143,3 +146,5 @@ p_sample()
 * test_detail_merge 4008 channel分离, block分离, fid 62.80453053222314
 * all5016, channel, block分离 fid  66.17780041173941
 * 能量函数用更大的block
+
+* EGSDE FID  49.845  50.1 Ours 48.6 可以
