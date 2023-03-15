@@ -409,7 +409,7 @@ class GaussianDiffusion:
             for i in range(len(gradients)):
                 gradients[i], _ = divide_gradient(x,gradients[i], mean_t, condition_kwargs["area"])
                 # gradients[i] = gradients[i] * p_mean_var["variance"]
-                gradients[i] = gradients[i] * _extract_into_tensor(self.weight_energy, t, x.shape) / gradients[i].norm(dim=[2,3],keepdim= True) * dg_m.norm(dim=[2,3], keepdim= True) * 25
+                gradients[i] = gradients[i] * _extract_into_tensor(self.weight_energy, t, x.shape) / gradients[i].norm(dim=[2,3],keepdim= True) * dg_m.norm(dim=[2,3], keepdim= True) * 40
                 if condition_kwargs["detail_merge"]:
                     gradients[i] = blockzation(gradients[i], condition_kwargs["area"])
             
@@ -433,7 +433,7 @@ class GaussianDiffusion:
             # gradient = dg_m + gradients[0]
             # sub-mainfold_t restore
             # middle = block_adaIN(x+gradient, is_simplied=True, style_mean=mean_t, style_std=std_t, blocknum=condition_kwargs["area"])
-            middle = x + gradient * 2
+            middle = x + gradient * 1.5
 
             if onManifold:
                 return block_adaIN(middle, is_simplied= True, style_mean=mean_t, style_std=std_t, blocknum=condition_kwargs["area"])

@@ -21,6 +21,7 @@ from guided_diffusion.script_util import (
     create_model_and_diffusion,
     add_dict_to_argparser,
     args_to_dict,
+    create_dse
 )
 from guided_diffusion.image_datasets import load_data
 from torchvision import utils, models
@@ -38,6 +39,23 @@ def load_reference(data_dir, batch_size, image_size, class_cond=False):
     for large_batch, model_kwargs in data:
         model_kwargs["ref_img"] = large_batch
         yield model_kwargs
+
+def norm(t):
+    return F.normalize(t, dim=1, eps=1e-10)
+
+def cosine_similarity(X,Y):
+    '''
+    compute cosine similarity for each pair of image
+    Input shape: (batch,channel,H,W)
+    Output shape: (batch,1)
+    '''
+    b, c, h, w = X.shape[0], X.shape[1], X.shape[2], X.shape[3]
+    X = X.reshape(b, c, h * w)
+    Y = Y.reshape(b, c, h * w)
+    corr = norm(X)*norm(Y)#(B,C,H*W)
+    similarity = corr.sum(dim=1).mean(dim=1)
+    return similarity
+
 def main():
     args = create_argparser().parse_args()
 
@@ -85,6 +103,20 @@ def main():
     cosmodel.eval()
     cos = th.nn.CosineSimilarity(dim = 1, eps = 1e-6).to(dist_util.dev())
 
+    dse = create_dse(image_size=256,
+                         num_class=2,
+                         classifier_use_fp16=False,
+                         classifier_width=128,
+                         classifier_depth=2,
+                         classifier_attention_resolutions="32,16,8",
+                         classifier_use_scale_shift_norm=True,
+                         classifier_resblock_updown=True,
+                         classifier_pool='attention',
+                         phase='test')
+    states = th.load("/home/sunsk/Models/diffusion/cat2dog_dse.pt")
+    dse.load_state_dict(states)
+    dse.to(dist_util.dev())
+    dse.eval()
     # supply simple gradients
     def cond_fn(x, t, ref_img=None):
         assert ref_img is not None
@@ -106,8 +138,11 @@ def main():
             # deepfeature1 = cosmodel(x_in)
             # deepfeature2 = cosmodel(ref_img)
             # grad2 = batchsize * th.autograd.grad(cos(deepfeature1, deepfeature2).mean(), x_in)[0] * args.classifier_scale
+            # TODO ref_img里加噪声, check plus/ minus
+            energy = cosine_similarity(dse(ref_img, t), dse(x_in, t))
             grad = th.autograd.grad(gap.sum(), x_in)[0] * args.classifier_scale
-            return [-grad]#, grad2]
+            grad2 = th.autograd.grad(energy.sum(), x_in)[0]
+            return [-grad, -grad2]
 
     logger.log("loading data...")
     data = load_reference(
@@ -161,7 +196,7 @@ def create_argparser():
     defaults = dict(
         clip_denoised=True,
         num_samples=1000,
-        batch_size=4,
+        batch_size=32,
         range_t=0,
         use_ddim=False,
         base_samples="",
