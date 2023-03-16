@@ -138,11 +138,12 @@ def main():
             # deepfeature1 = cosmodel(x_in)
             # deepfeature2 = cosmodel(ref_img)
             # grad2 = batchsize * th.autograd.grad(cos(deepfeature1, deepfeature2).mean(), x_in)[0] * args.classifier_scale
-            # TODO ref_img里加噪声, check plus/ minus
+            # the sign of cos similarity is plus
+            # TODO ref_img里加噪声
             energy = cosine_similarity(dse(ref_img, t), dse(x_in, t))
             grad = th.autograd.grad(gap.sum(), x_in)[0] * args.classifier_scale
             grad2 = th.autograd.grad(energy.sum(), x_in)[0]
-            return [-grad, -grad2]
+            return [-grad, grad2]
 
     logger.log("loading data...")
     data = load_reference(
