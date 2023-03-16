@@ -389,7 +389,7 @@ class GaussianDiffusion:
         This uses the conditioning strategy from Sohl-Dickstein et al. (2015).
         """
         # if model_kwargs is not None and "ref_img" in model_kwargs:
-        #     model_kwargs["ref_img"] = self.q_sample(model_kwargs["ref_img"], t, 0)
+        ref_noisyimg = self.q_sample(model_kwargs["ref_img"], t, 0)
         assert model_kwargs is not None
         assert condition_kwargs is not None
         assert "ref_img" in model_kwargs
@@ -404,7 +404,7 @@ class GaussianDiffusion:
             dg = (p_mean_var["mean"] - _extract_into_tensor(self.sqrt_recip_alphas, t, x.shape) * x).float() # the grad diffusion gives
             dg_m, dg_o = divide_gradient(x, dg, mean_t, condition_kwargs["area"]) 
             
-            gradients = cond_fn(x, self._scale_timesteps(t), ref_img=model_kwargs["ref_img"]) # tuple or list
+            gradients = cond_fn(x, self._scale_timesteps(t), ref_img=model_kwargs["ref_img"], ref_noisyimg=ref_noisyimg) # tuple or list
 
             for i in range(len(gradients)):
                 gradients[i], _ = divide_gradient(x,gradients[i], mean_t, condition_kwargs["area"])
@@ -433,7 +433,7 @@ class GaussianDiffusion:
             # gradient = dg_m + gradients[0]
             # sub-mainfold_t restore
             # middle = block_adaIN(x+gradient, is_simplied=True, style_mean=mean_t, style_std=std_t, blocknum=condition_kwargs["area"])
-            middle = x + gradient * 1.5
+            middle = x + gradient * 2
 
             if onManifold:
                 return block_adaIN(middle, is_simplied= True, style_mean=mean_t, style_std=std_t, blocknum=condition_kwargs["area"])

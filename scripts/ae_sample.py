@@ -118,10 +118,9 @@ def main():
     dse.to(dist_util.dev())
     dse.eval()
     # supply simple gradients
-    def cond_fn(x, t, ref_img=None):
+    def cond_fn(x, t, ref_img=None, ref_noisyimg=None):
         assert ref_img is not None
         batchsize = x.shape[0]
-
         with th.enable_grad():
             # feature
             x_in = x.detach().requires_grad_(True)
@@ -139,8 +138,11 @@ def main():
             # deepfeature2 = cosmodel(ref_img)
             # grad2 = batchsize * th.autograd.grad(cos(deepfeature1, deepfeature2).mean(), x_in)[0] * args.classifier_scale
             # the sign of cos similarity is plus
-            # TODO ref_img里加噪声
-            energy = cosine_similarity(dse(diffusion.q_sample(ref_img,t), t), dse(x_in, t))
+            # TODO ref_img里正确地加噪声
+            X = dse(x_in, t)
+            yt = ref_noisyimg#diffusion.q_sample(ref_img,t)
+            Y = dse(yt, t)
+            energy = cosine_similarity(X, Y)
             grad = th.autograd.grad(gap.sum(), x_in)[0] * args.classifier_scale
             grad2 = th.autograd.grad(energy.sum(), x_in)[0]
             return [-grad, grad2]
@@ -197,7 +199,7 @@ def create_argparser():
     defaults = dict(
         clip_denoised=True,
         num_samples=1000,
-        batch_size=32,
+        batch_size=8,
         range_t=0,
         use_ddim=False,
         base_samples="",
