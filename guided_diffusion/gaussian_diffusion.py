@@ -390,6 +390,7 @@ class GaussianDiffusion:
         """
         # if model_kwargs is not None and "ref_img" in model_kwargs:
         ref_noisyimg = self.q_sample(model_kwargs["ref_img"], t, 0)
+        gradients = cond_fn(x, self._scale_timesteps(t), ref_img=model_kwargs["ref_img"], ref_noisyimg=ref_noisyimg) # tuple or list
         assert model_kwargs is not None
         assert condition_kwargs is not None
         assert "ref_img" in model_kwargs
@@ -404,12 +405,10 @@ class GaussianDiffusion:
             dg = (p_mean_var["mean"] - _extract_into_tensor(self.sqrt_recip_alphas, t, x.shape) * x).float() # the grad diffusion gives
             dg_m, dg_o = divide_gradient(x, dg, mean_t, condition_kwargs["area"]) 
             
-            gradients = cond_fn(x, self._scale_timesteps(t), ref_img=model_kwargs["ref_img"], ref_noisyimg=ref_noisyimg) # tuple or list
-
             for i in range(len(gradients)):
                 gradients[i], _ = divide_gradient(x,gradients[i], mean_t, condition_kwargs["area"])
                 # gradients[i] = gradients[i] * p_mean_var["variance"]
-                gradients[i] = gradients[i] * _extract_into_tensor(self.weight_energy, t, x.shape) / gradients[i].norm(dim=[2,3],keepdim= True) * dg_m.norm(dim=[2,3], keepdim= True) * 40
+                gradients[i] = gradients[i] * _extract_into_tensor(self.weight_energy, t, x.shape) / gradients[i].norm(dim=[2,3],keepdim= True) * dg_m.norm(dim=[2,3], keepdim= True) * 25
                 if condition_kwargs["detail_merge"]:
                     gradients[i] = blockzation(gradients[i], condition_kwargs["area"])
             
@@ -448,6 +447,25 @@ class GaussianDiffusion:
                 # p_mean_var["mean"].float()
             )
         else:
+            #TODO setting for the no moo
+            # f = _extract_into_tensor(self.sqrt_recip_alphas, t, x.shape) * x - x
+            # dg = (p_mean_var["mean"] - _extract_into_tensor(self.sqrt_recip_alphas, t, x.shape) * x).float() # the grad diffusion gives
+
+            # for i in range(len(gradients)):
+            #     gradients[i] = gradients[i] * _extract_into_tensor(self.weight_energy, t, x.shape) / gradients[i].norm(dim=[2,3],keepdim= True) * dg.norm(dim=[2,3], keepdim= True) * 25
+            #     if condition_kwargs["detail_merge"]:
+            #         gradients[i] = blockzation(gradients[i], condition_kwargs["area"])
+
+            # if not condition_kwargs["detail_merge"]:
+            #     gradients = th.stack([dg , *gradients], -3) # batch, channel, number, h, w
+            #     gradient = frank_wolfe_solver(gradients, ind_dim=2)
+            # else:
+            #     gradients = th.stack([blockzation(dg, condition_kwargs["area"]), *gradients], -3)  # batch, channel, block, block, number, h/block, w/block
+            #     gradient = unblockzation(frank_wolfe_solver(gradients,ind_dim=4))
+
+            # middle = x + gradient
+            # final = middle + f
+            # new_mean = ( final.float())
             new_mean = ( p_mean_var["mean"].float())
         return new_mean
 

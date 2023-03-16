@@ -24,6 +24,7 @@ from guided_diffusion.script_util import (
     create_dse
 )
 from guided_diffusion.image_datasets import load_data
+from guided_diffusion.resizer import Resizer
 from torchvision import utils, models
 
 # added
@@ -42,6 +43,9 @@ def load_reference(data_dir, batch_size, image_size, class_cond=False):
 
 def norm(t):
     return F.normalize(t, dim=1, eps=1e-10)
+
+def mse(x,y):
+    return (x - y).square().sum(dim=(1, 2, 3))
 
 def cosine_similarity(X,Y):
     '''
@@ -92,16 +96,15 @@ def main():
     stagevgg = StageVGG()
 
     stagevgg.to(dist_util.dev())
-    # if args.use_fp16:
-    #     stagevgg.convert_to_fp16()
     stagevgg.eval()
+
     # path = "/home/sunsk/Models/resnet50/resnet50-19c8e357.pth"
     # path = "/home/sunsk/Models/resnet50/resnet50-0676ba61.pth"
-    cosmodel = models.resnet50(pretrained=True)
+    # cosmodel = models.resnet50(pretrained=True)
     # cosmodel.load_state_dict(th.load(path))
-    cosmodel = th.nn.Sequential(*(list(cosmodel.children())[:5])).to(dist_util.dev()) # replace with better neural model for similarity
-    cosmodel.eval()
-    cos = th.nn.CosineSimilarity(dim = 1, eps = 1e-6).to(dist_util.dev())
+    # cosmodel = th.nn.Sequential(*(list(cosmodel.children())[:5])).to(dist_util.dev()) # replace with better neural model for similarity
+    # cosmodel.eval()
+    # cos = th.nn.CosineSimilarity(dim = 1, eps = 1e-6).to(dist_util.dev())
 
     dse = create_dse(image_size=256,
                          num_class=2,
@@ -117,10 +120,15 @@ def main():
     dse.load_state_dict(states)
     dse.to(dist_util.dev())
     dse.eval()
+
+    resizer_shape = (args.batch_size, 3, 256, 256)
+    resizer_shape_d = (args.batch_size, 3, 8, 8)
+    down = Resizer(resizer_shape, 1 / 32).to(dist_util.dev())
+    up = Resizer(resizer_shape_d, 32).to(dist_util.dev())
+    
     # supply simple gradients
     def cond_fn(x, t, ref_img=None, ref_noisyimg=None):
         assert ref_img is not None
-        batchsize = x.shape[0]
         with th.enable_grad():
             # feature
             x_in = x.detach().requires_grad_(True)
@@ -129,23 +137,19 @@ def main():
             target_feat = block_adaIN(x_feat, y_feat, blocknum=args.area)
             gap = (x_feat - target_feat) ** 2
 
-            ## original image feature
-            # target = block_adaIN(x_in, ref_img, blocknum=1)
-            # gap = (x_in - target) ** 2
-
-            # # cos similarity
-            # deepfeature1 = cosmodel(x_in)
-            # deepfeature2 = cosmodel(ref_img)
-            # grad2 = batchsize * th.autograd.grad(cos(deepfeature1, deepfeature2).mean(), x_in)[0] * args.classifier_scale
             # the sign of cos similarity is plus
-            # TODO ref_img里正确地加噪声
+
+            # use the img/noisyimg
             X = dse(x_in, t)
-            yt = ref_noisyimg#diffusion.q_sample(ref_img,t)
+            yt = ref_img#diffusion.q_sample(ref_img,t)
             Y = dse(yt, t)
             energy = cosine_similarity(X, Y)
-            grad = th.autograd.grad(gap.sum(), x_in)[0] * args.classifier_scale
+
+            low_dis = mse(up(down(ref_noisyimg)),up(down(x_in)))
+            grad = th.autograd.grad(gap.sum(), x_in)[0]
             grad2 = th.autograd.grad(energy.sum(), x_in)[0]
-            return [-grad, grad2]
+            grad3 = th.autograd.grad(low_dis.sum(),x_in)[0]
+            return [-grad, grad2, -grad3]
 
     logger.log("loading data...")
     data = load_reference(
@@ -199,7 +203,7 @@ def create_argparser():
     defaults = dict(
         clip_denoised=True,
         num_samples=1000,
-        batch_size=8,
+        batch_size=4,
         range_t=0,
         use_ddim=False,
         base_samples="",
