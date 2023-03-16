@@ -141,15 +141,16 @@ def main():
 
             # use the img/noisyimg
             X = dse(x_in, t)
-            yt = ref_img#diffusion.q_sample(ref_img,t)
+            yt = ref_noisyimg#diffusion.q_sample(ref_img,t)
             Y = dse(yt, t)
             energy = cosine_similarity(X, Y)
 
             low_dis = mse(up(down(ref_noisyimg)),up(down(x_in)))
+
             grad = th.autograd.grad(gap.sum(), x_in)[0]
             grad2 = th.autograd.grad(energy.sum(), x_in)[0]
             grad3 = th.autograd.grad(low_dis.sum(),x_in)[0]
-            return [-grad, grad2, -grad3]
+            return [-grad, -grad2, -grad3]
 
     logger.log("loading data...")
     data = load_reference(

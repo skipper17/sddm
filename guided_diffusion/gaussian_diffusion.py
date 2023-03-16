@@ -389,13 +389,14 @@ class GaussianDiffusion:
         This uses the conditioning strategy from Sohl-Dickstein et al. (2015).
         """
         # if model_kwargs is not None and "ref_img" in model_kwargs:
-        ref_noisyimg = self.q_sample(model_kwargs["ref_img"], t, 0)
-        gradients = cond_fn(x, self._scale_timesteps(t), ref_img=model_kwargs["ref_img"], ref_noisyimg=ref_noisyimg) # tuple or list
         assert model_kwargs is not None
         assert condition_kwargs is not None
         assert "ref_img" in model_kwargs
         assert "ref_mean" in condition_kwargs
         assert "ref_std" in condition_kwargs
+
+        ref_noisyimg = self.q_sample(model_kwargs["ref_img"], t, 0)
+        gradients = cond_fn(x, self._scale_timesteps(t), ref_img=model_kwargs["ref_img"], ref_noisyimg=ref_noisyimg) # tuple or list
 
         if t[0] > condition_kwargs["range_t"]:
 
@@ -447,7 +448,7 @@ class GaussianDiffusion:
                 # p_mean_var["mean"].float()
             )
         else:
-            #TODO setting for the no moo
+            # # MOO
             # f = _extract_into_tensor(self.sqrt_recip_alphas, t, x.shape) * x - x
             # dg = (p_mean_var["mean"] - _extract_into_tensor(self.sqrt_recip_alphas, t, x.shape) * x).float() # the grad diffusion gives
 
@@ -465,8 +466,16 @@ class GaussianDiffusion:
 
             # middle = x + gradient
             # final = middle + f
-            # new_mean = ( final.float())
-            new_mean = ( p_mean_var["mean"].float())
+
+            # Direct ADD
+            weight_t = _extract_into_tensor(self.weight_energy, t, x.shape)
+            li = 2 #0.5
+            ls = 500 #700
+            final = p_mean_var["mean"] - ls * weight_t * gradients[1] + li * weight_t * gradients[2]
+
+
+            new_mean = ( final.float())
+            # new_mean = ( p_mean_var["mean"].float())
         return new_mean
 
     def condition_score(self, cond_fn, p_mean_var, x, t, model_kwargs=None):
