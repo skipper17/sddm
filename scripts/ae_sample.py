@@ -140,7 +140,7 @@ def main():
             # grad2 = batchsize * th.autograd.grad(cos(deepfeature1, deepfeature2).mean(), x_in)[0] * args.classifier_scale
             # the sign of cos similarity is plus
             # TODO ref_img里加噪声
-            energy = cosine_similarity(dse(ref_img, t), dse(x_in, t))
+            energy = cosine_similarity(dse(diffusion.q_sample(ref_img,t), t), dse(x_in, t))
             grad = th.autograd.grad(gap.sum(), x_in)[0] * args.classifier_scale
             grad2 = th.autograd.grad(energy.sum(), x_in)[0]
             return [-grad, grad2]
