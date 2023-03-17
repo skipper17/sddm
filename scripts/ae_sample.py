@@ -116,7 +116,7 @@ def main():
                          classifier_resblock_updown=True,
                          classifier_pool='attention',
                          phase='test')
-    states = th.load("/home/sunsk/Models/diffusion/cat2dog_dse.pt")
+    states = th.load("/home/sunsk/Models/diffusion/male2female_dse.pt")
     dse.load_state_dict(states)
     dse.to(dist_util.dev())
     dse.eval()
@@ -150,7 +150,7 @@ def main():
             grad = th.autograd.grad(gap.sum(), x_in)[0]
             grad2 = th.autograd.grad(energy.sum(), x_in)[0]
             grad3 = th.autograd.grad(low_dis.sum(),x_in)[0]
-            return [-grad, -grad2, -grad3]
+            return [-grad2, -grad3, -grad]
 
     logger.log("loading data...")
     data = load_reference(

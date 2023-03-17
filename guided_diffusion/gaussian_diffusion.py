@@ -469,9 +469,9 @@ class GaussianDiffusion:
 
             # Direct ADD
             weight_t = _extract_into_tensor(self.weight_energy, t, x.shape)
-            li = 2 #0.5
-            ls = 500 #700
-            final = p_mean_var["mean"] - ls * weight_t * gradients[1] + li * weight_t * gradients[2]
+            li = 0.5
+            ls = 700
+            final = p_mean_var["mean"] + ls * weight_t * gradients[0] + li * weight_t * gradients[1]
 
 
             new_mean = ( final.float())
