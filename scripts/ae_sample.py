@@ -116,7 +116,7 @@ def main():
                          classifier_resblock_updown=True,
                          classifier_pool='attention',
                          phase='test')
-    states = th.load("/home/sunsk/Models/diffusion/male2female_dse.pt")
+    states = th.load("/home/sunsk/Models/diffusion/wild2dog_dse.pt")
     dse.load_state_dict(states)
     dse.to(dist_util.dev())
     dse.eval()
@@ -203,7 +203,7 @@ def main():
 def create_argparser():
     defaults = dict(
         clip_denoised=True,
-        num_samples=1000,
+        num_samples=500,
         batch_size=4,
         range_t=0,
         use_ddim=False,

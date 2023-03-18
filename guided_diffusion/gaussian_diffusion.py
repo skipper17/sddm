@@ -130,7 +130,7 @@ class GaussianDiffusion:
         self.model_var_type = model_var_type
         self.loss_type = loss_type
         self.rescale_timesteps = rescale_timesteps
-
+        self.trigger = False
         # Use float64 for accuracy.
         betas = np.array(betas, dtype=np.float64)
         self.betas = betas
@@ -469,11 +469,14 @@ class GaussianDiffusion:
 
             # Direct ADD
             weight_t = _extract_into_tensor(self.weight_energy, t, x.shape)
-            li = 0.5
-            ls = 700
+            li = 2# 0.5
+            ls = 500# 700
             final = p_mean_var["mean"] + ls * weight_t * gradients[0] + li * weight_t * gradients[1]
 
-
+            if not self.trigger:
+                new_mean = ( (0.5 * final + 0.5* ref_noisyimg).float())
+                self.trigger = True
+                return new_mean
             new_mean = ( final.float())
             # new_mean = ( p_mean_var["mean"].float())
         return new_mean
