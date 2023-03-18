@@ -12,8 +12,12 @@ To better understand this, let's consider the computational cost of a 3x3 convol
 
 **W2:** *In 5.1, the GAN models that the author list are pretty old. The GAN model could achieve 13.7 in CelebA-HQ and 16.2 in AFHQ in [1], 7.79 in CelebA-HQ, and 8.04 in FFHQ. It is not fair to compare only with old models.*
 
-We sincerely apologize for not providing detailed information about the FID experiment settings in the paper. Since the diffusion process is slower than GANs, we followed EGSDE's approach and reduced the number of generated images for the FID comparison. We will also include the results of StarGAN v2 for a fair comparision. In the Cat2Dog task, our method outperformed both StarGAN v2 and EGSDE. We will also include the FID results of other datasets in the final version.
-[TODO]这里要贴一个实验的表格对比  要最好的FID结果Cat2Dog, 已经完成
+We sincerely apologize for not providing detailed information about the FID experiment settings in the paper. Since the diffusion process is slower than GANs, we followed EGSDE's approach and reduced the number of generated images for the FID comparison. We will also include the results of StarGAN v2 for a fair comparision. In the Cat2Dog task, our method (with strong guidance function of EGSDE) outperformed both StarGAN v2 and EGSDE, as shown in the following table. We will also include the FID results of other datasets in the final version.
+| Model      | FID | SSIM|             
+| ----------- | ----------- | ----------- |
+| StarGAN v2   | 54.88 ± 1.01        | 0.27 ± 0.003|
+| EGSDE (M=0.6T) 1000 diffusion steps     |   51.04 ± 0.37     |     0.361 ± 0.001 |
+| SDDM ($T_0$ = 0.6T) 100 diffusion steps   |   49.43 ± 0.23    |  0.361 ± 0.001|
 
 **W3:** *In table 1, 62.29 and 42.37 are not impressive performance on these two datasets. I expect to see more diverse comparisons among these models. (The cases shown in fig4 and fig5 are too limited).*
 
@@ -61,9 +65,12 @@ Thank you for bringing up this point. We apologize for not including enough visu
 
 <1> We acknowledge the importance of evaluating our approach on more diverse and challenging tasks, such as wild2dog image translation, and we consider including such comparisons in the final version of our paper. 
 
-<2> The table may have caused some confusion, leading to a misunderstanding. Specifically, in the Cat2Dog task, our SDDM model with 100 diffusion steps outperforms EGSDE with 1000 diffusion steps, while in the male2female task, our SDDM model with 100 diffusion steps outperforms EGSDE with 200 diffusion steps. While it is true that EGSDE with 1000 diffusion steps outperforms our 100 diffusion steps SDDM, it is important to note that the energy function used in EGSDE is strongly pretrained on related datasets and contains significant domain-specific information. In contrast, to demonstrate the effectiveness and versatility of our framework, we intentionally chose to use a weak energy function consisting of only one layer of convolution without any further pretraining. After incorporating the strong guidance function from EGSDE, our method outperforms EGSDE in the FID score. We will clarify this point in the final version of the paper.
+<2> The table may have caused some confusion, leading to a misunderstanding. Specifically, in the Cat2Dog task, our SDDM model with 100 diffusion steps outperforms EGSDE with 1000 diffusion steps, while in the male2female task, our SDDM model with 100 diffusion steps outperforms EGSDE with 200 diffusion steps. While it is true that EGSDE with 1000 diffusion steps outperforms our 100 diffusion steps SDDM, it is important to note that the energy function used in EGSDE is strongly pretrained on related datasets and contains significant domain-specific information. In contrast, to demonstrate the effectiveness and versatility of our framework, we intentionally chose to use a weak energy function consisting of only one layer of convolution without any further pretraining. After incorporating the strong guidance function from EGSDE, our method outperforms EGSDE in the FID score, as shown in the following table. We will clarify this point in the final version of the paper.
+| Model      | FID |           
+| ----------- | ----------- |
+| EGSDE (M=0.5T) 1000 diffusion steps    | 41.93 ± 0.11        |
+| SDDM ($T_0$ = 0.5T) 100 diffusion steps  |   40.08 ± 0.13    | 
 
- [TODO] 贴一个在人脸benchmark上SDDM 超越EGSDE的例子
 
 **Q1:** *Any theoretical justification what manifolds are more suitable in practice?*
 
@@ -83,25 +90,33 @@ L1: *The paper should discuss more about the limitations of the method.*
 
 **W1:** *Several related studies are missed. Due to this, I could not sufficiently judge the novelty as well as significance of this work.*
 
-We propose a general framwork.
+We introduce a novel framework for conditional image generation through diffusion models that does not require pre-training diffusion model with conditions. Our approach is particularly focused on image conditioning.
 
 <1> Compared with Diffusion Visual Counterfactual Explanations (DVCE)
 - Previous methods, such as EGSDE, use fixed coefficients for the gradients of guidance functions and score during the entire diffusion process.
-- DVCE move further by normalizing the gradients of guidance functions first, but still use fixed coefficients after normalization during the entire diffusion process.
+- DVCE takes a step forward by first normalizing the gradients of guidance functions first, but still use fixed coefficients after normalization during the entire diffusion process.
 - While previous methods, such as EGSDE and DVCE, have focused on balancing the guidance functions, they have neglected to consider the balance between the guidance functions and the score. They both can not avoid the case that the guided score may have negative direction with original score, which indicades the guidance functions have overly negative impact on score. 
 - In contrast, our approach utilizes multi-objective optimization to address this issue. By dynamically changing the coefficients of the gradients of guidance functions and score at different diffusion steps, we can ensure that negative impacts are avoided. You can refer the Table 4. for details.
-I missed this paper before, I will cite this paper in the final version. Thank you very much!
+As a summary, our framework takes into account not only balancing the guidance functions, but also balancing the guidance functions and score.
+I missed this paper before, but I will make sure to include it in the final version of my work and properly cite it. Thank you very much!
 
-<2> Compared with Improving Diffusion Models for Inverse Problems using Manifold Constraints 
-This method has strict linear form about the condition (Which is hard for many conditional generation tasks) and use the strong manifold assumption to ensure they has a closed-form to get a 余项到流形上.  while our method follows manifold optimization, use the Restriction function as the bridge for optimization on the manifolds, which can be applied well for more conditional generation tasks.
+<2> Compared with Improving Diffusion Models for Inverse Problems using Manifold Constraints
+This method has a strict linear form of the condition, which is a overly strong assumption for many conditional generation tasks like unpaired image-to-image translation. Additionally, it relies on the strong manifold assumption for theoretical results. In contrast, our method follows manifold optimization at each time step of the stochastic differential equation. We use the restriction function as a bridge between the manifold and the tangent space, and establish the relationship between the AdaIN module (which is generally used in style transfer) and the restriction function. Furthermore, we propose the BAdaIN module for better manifold design. Our proposed method can be applied more effectively to a wider range of conditional generation tasks including the unpaired image-to-image translation.
+It is also worth noting that in our concentration of perturbed manifold, we reduce the dimensionality bound of the manifold from n-1 to n-2, and further lower it using chunking techniques.
 
 <3> Compared with Score-SDE
 The predictor-corrector method is amazing, but we are totally different. from t to t-1, predictor and corrector are both to keep the distribution of t-1
-But in our method we try to reach the local balance point of score, energy guidances.
+But in our method we try to reach the local balance point of score and energy guidances.
 
 **W2:**  *Although one of the important advantages of the proposed method is the dynamic balancing of the multiple functions for guidance, this point has not been verified empirically, because the authors used only a single energy function for guidance in the experiments.*
 
-已经有一个, 我们会比较加入多个guidance 函数的影响. 我们的算法在score 和guidance 也会有一个动态平衡的效果.已经在奏效了.
+Sorry for not make it clear that the main purpose of the multi objective optimization is dynamaic balancing the guidance functions and the score, more details can refer the W1.1 and it is verified in  Table 4. 
+Indeed our proposed method also can dynamic balancing multiple guidance functions. 
+We add the two guidance function from EGSDE and here is the balance results for the male2female task (For a fair comparision we do not use guidance functions when $t < T_0$ ), which shows that our proposed method can also dynamic balance multiple guidance functions.
+| Model      | FID |  SSIM |          
+| ----------- | ----------- | -----|
+| SDDM ($T_0$ = 0.5T) w. the simple guidance funciton    | 44.37± 0.23        | 0.526 ± 0.001 |
+| SDDM ($T_0$ = 0.5T) w. another two guidance functions  |   42.24± 0.31    | 0.535 ± 0.001|  which indicades our method works
 
 **W3:**  *At line 13 of Algorithm 1, $x_t$ should be $x_t^*$. I'm not sure whether we need projection of $x_t^*$ onto B after this line or not.*
 
