@@ -59,15 +59,25 @@ Thank you for bringing up this point. We apologize for not including enough visu
 
 **W1:** *The experiments are only based on two datasets, which is limited. The performance with sufficient diffusion steps is not as good as state of the art.*
 
-<1> we will consider adding more tasks for comparision.
+<1> We acknowledge the importance of evaluating our approach on more diverse and challenging tasks, such as wild2dog image translation, and we consider including such comparisons in the final version of our paper. 
 
-<2> We propose a new framework! 我们没有用强力的energy函数, refer EGSDE. and we add some [用上EGSDE, 人脸 打败, 完成].
+<2> The table may have caused some confusion, leading to a misunderstanding. Specifically, in the Cat2Dog task, our SDDM model with 100 diffusion steps outperforms EGSDE with 1000 diffusion steps, while in the male2female task, our SDDM model with 100 diffusion steps outperforms EGSDE with 200 diffusion steps. While it is true that EGSDE with 1000 diffusion steps outperforms our 100 diffusion steps SDDM, it is important to note that the energy function used in EGSDE is strongly pretrained on related datasets and contains significant domain-specific information. In contrast, to demonstrate the effectiveness and versatility of our framework, we intentionally chose to use a weak energy function consisting of only one layer of convolution without any further pretraining. After incorporating the strong guidance function from EGSDE, our method outperforms EGSDE in the FID score. We will clarify this point in the final version of the paper.
+
+ [TODO] 贴一个在人脸benchmark上SDDM 超越EGSDE的例子
 
 **Q1:** *Any theoretical justification what manifolds are more suitable in practice?*
 
-Normally we just use manifolds by 经验主义 介绍经验. 如果定量的话, 我们可以考虑在仅考虑一阶矩二阶矩的情况下(当成高斯分布) 使用数据分布和流形对应的分布之间的KL距离来衡量流形对数据分布的影响.
+Thank you for the interesting question. In practice, we use hyperball restriction, and the key challenge is how to choose the number of chunking blocks. Within a certain range, chunking more blocks means a lower dimension of the manifold, which leads to tighter constraints and better SSIM scores but worse FID scores. We chose a block size of 16x16, considering both the visual result and the balance between FID and SSIM scores.
 
-L1: extra computations
+[TODO] 贴不同block个数的对比
+
+There is also an analytics-based approach. Since the manifold in SDDM represents the manifold of the perturbed $y_0$, we can calculate the KL distance between the distribution indicated by the manifold of perturbed $y_0$ and the distribution indicated by the real data manifold (like in the second part of FID calculation) to determine whether the manifold is tight. We will include this analysis in the final version of the paper. Thank you for your valuable question.
+
+
+L1: *The paper should discuss more about the limitations of the method.*  
+
+-   Our method requires additional computations for manifold construction and multi-objective optimization compared to traditional methods.
+-   Due to the manifold is inappropriate for the low-noise images, it can not be applied in the final 10% diffusion steps.
 
 ## To Kgrj
 
@@ -75,12 +85,16 @@ L1: extra computations
 
 We propose a general framwork.
 
-<1> Compared with 
-Diffusion Visual Counterfactual Explanations 平衡多个guidance 跟EGSDE没有本质区别, Normalization 没有从moo的视角来看问题, We go further to avoid the guidance negatively affect score. 
-I don't find this paper, I will cite this paper in the final version.
-<2> Compared with
-Improving Diffusion Models for Inverse Problems using Manifold Constraints 
+<1> Compared with Diffusion Visual Counterfactual Explanations (DVCE)
+- Previous methods, such as EGSDE, use fixed coefficients for the gradients of guidance functions and score during the entire diffusion process.
+- DVCE move further by normalizing the gradients of guidance functions first, but still use fixed coefficients after normalization during the entire diffusion process.
+- While previous methods, such as EGSDE and DVCE, have focused on balancing the guidance functions, they have neglected to consider the balance between the guidance functions and the score. They both can not avoid the case that the guided score may have negative direction with original score, which indicades the guidance functions have overly negative impact on score. 
+- In contrast, our approach utilizes multi-objective optimization to address this issue. By dynamically changing the coefficients of the gradients of guidance functions and score at different diffusion steps, we can ensure that negative impacts are avoided. You can refer the Table 4. for details.
+I missed this paper before, I will cite this paper in the final version. Thank you very much!
+
+<2> Compared with Improving Diffusion Models for Inverse Problems using Manifold Constraints 
 This method has strict linear form about the condition (Which is hard for many conditional generation tasks) and use the strong manifold assumption to ensure they has a closed-form to get a 余项到流形上.  while our method follows manifold optimization, use the Restriction function as the bridge for optimization on the manifolds, which can be applied well for more conditional generation tasks.
+
 <3> Compared with Score-SDE
 The predictor-corrector method is amazing, but we are totally different. from t to t-1, predictor and corrector are both to keep the distribution of t-1
 But in our method we try to reach the local balance point of score, energy guidances.
