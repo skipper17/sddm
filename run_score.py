@@ -2,10 +2,10 @@ from tool.eval_score import fid_l2_psnr_ssim
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 if __name__ == '__main__':
-    task = 'male2female'
+    task = 'wild2dog'
 
     if task == 'cat2dog':
-        translate_path = 'myoutput/cat2dog/50_100_25_2_fullegsde_noisy_bestfid'
+        translate_path = 'myoutput/cat2dog/52_100_25_2_32'
         source_path = '/home/data/afhq/val/cat'
         gt_path = '/home/data/afhq/val/dog'
         fid_l2_psnr_ssim(task, translate_path, source_path, gt_path)
