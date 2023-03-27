@@ -433,7 +433,7 @@ class GaussianDiffusion:
             # gradient = dg_m + gradients[0]
             # sub-mainfold_t restore
             # middle = block_adaIN(x+gradient, is_simplied=True, style_mean=mean_t, style_std=std_t, blocknum=condition_kwargs["area"])
-            middle = x + gradient * 2
+            middle = x + gradient 
 
             if onManifold:
                 return block_adaIN(middle, is_simplied= True, style_mean=mean_t, style_std=std_t, blocknum=condition_kwargs["area"])
@@ -468,17 +468,17 @@ class GaussianDiffusion:
             # final = middle + f
 
             # Direct ADD
-            weight_t = _extract_into_tensor(self.weight_energy, t, x.shape)
-            li = 2# 0.5
-            ls = 500# 700
-            final = p_mean_var["mean"] + ls * weight_t * gradients[0] + li * weight_t * gradients[1]
+            # weight_t = _extract_into_tensor(self.weight_energy, t, x.shape)
+            # li = 2# 0.5
+            # ls = 500# 700
+            # final = p_mean_var["mean"] + ls * weight_t * gradients[0] + li * weight_t * gradients[1]
 
-            if not self.trigger:
-                new_mean = ( (0.5 * final + 0.5* ref_noisyimg).float())
-                self.trigger = True
-                return new_mean
-            new_mean = ( final.float())
-            # new_mean = ( p_mean_var["mean"].float())
+            # if not self.trigger:
+            #     new_mean = ( (0.5 * final + 0.5* ref_noisyimg).float())
+            #     self.trigger = True
+            #     return new_mean
+            # new_mean = ( final.float())
+            new_mean = ( p_mean_var["mean"].float())
         return new_mean
 
     def condition_score(self, cond_fn, p_mean_var, x, t, model_kwargs=None):
