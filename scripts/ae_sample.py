@@ -98,33 +98,26 @@ def main():
     stagevgg.to(dist_util.dev())
     stagevgg.eval()
 
-    # path = "/home/sunsk/Models/resnet50/resnet50-19c8e357.pth"
-    # path = "/home/sunsk/Models/resnet50/resnet50-0676ba61.pth"
-    # cosmodel = models.resnet50(pretrained=True)
-    # cosmodel.load_state_dict(th.load(path))
-    # cosmodel = th.nn.Sequential(*(list(cosmodel.children())[:5])).to(dist_util.dev()) # replace with better neural model for similarity
-    # cosmodel.eval()
-    # cos = th.nn.CosineSimilarity(dim = 1, eps = 1e-6).to(dist_util.dev())
 
-    dse = create_dse(image_size=256,
-                         num_class=2,
-                         classifier_use_fp16=False,
-                         classifier_width=128,
-                         classifier_depth=2,
-                         classifier_attention_resolutions="32,16,8",
-                         classifier_use_scale_shift_norm=True,
-                         classifier_resblock_updown=True,
-                         classifier_pool='attention',
-                         phase='test')
-    states = th.load("/home/sunsk/Models/diffusion/cat2dog_dse.pt")
-    dse.load_state_dict(states)
-    dse.to(dist_util.dev())
-    dse.eval()
+    # dse = create_dse(image_size=256,
+    #                      num_class=2,
+    #                      classifier_use_fp16=False,
+    #                      classifier_width=128,
+    #                      classifier_depth=2,
+    #                      classifier_attention_resolutions="32,16,8",
+    #                      classifier_use_scale_shift_norm=True,
+    #                      classifier_resblock_updown=True,
+    #                      classifier_pool='attention',
+    #                      phase='test')
+    # states = th.load("/home/sunsk/Models/diffusion/cat2dog_dse.pt")
+    # dse.load_state_dict(states)
+    # dse.to(dist_util.dev())
+    # dse.eval()
 
-    resizer_shape = (args.batch_size, 3, 256, 256)
-    resizer_shape_d = (args.batch_size, 3, 8, 8)
-    down = Resizer(resizer_shape, 1 / 32).to(dist_util.dev())
-    up = Resizer(resizer_shape_d, 32).to(dist_util.dev())
+    # resizer_shape = (args.batch_size, 3, 256, 256)
+    # resizer_shape_d = (args.batch_size, 3, 8, 8)
+    # down = Resizer(resizer_shape, 1 / 32).to(dist_util.dev())
+    # up = Resizer(resizer_shape_d, 32).to(dist_util.dev())
     
     # supply simple gradients
     def cond_fn(x, t, ref_img=None, ref_noisyimg=None):
@@ -140,16 +133,16 @@ def main():
             # the sign of cos similarity is plus
 
             # use the img/noisyimg
-            X = dse(x_in, t)
-            yt = ref_noisyimg#diffusion.q_sample(ref_img,t)
-            Y = dse(yt, t)
-            energy = cosine_similarity(X, Y)
+            # X = dse(x_in, t)
+            # yt = ref_noisyimg#diffusion.q_sample(ref_img,t)
+            # Y = dse(yt, t)
+            # energy = cosine_similarity(X, Y)
 
-            low_dis = mse(up(down(ref_noisyimg)),up(down(x_in)))
+            # low_dis = mse(up(down(ref_noisyimg)),up(down(x_in)))
 
             grad = th.autograd.grad(gap.sum(), x_in)[0]
-            grad2 = th.autograd.grad(energy.sum(), x_in)[0]
-            grad3 = th.autograd.grad(low_dis.sum(),x_in)[0]
+            # grad2 = th.autograd.grad(energy.sum(), x_in)[0]
+            # grad3 = th.autograd.grad(low_dis.sum(),x_in)[0]
             return [-grad] #[-grad2, -grad3,
 
     logger.log("loading data...")
