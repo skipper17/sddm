@@ -13,13 +13,7 @@ SDDM derives manifolds to make the distributions of adjacent time steps separabl
 
 
 ## Download pre-trained models
-Create a folder `models/` and download model checkpoints into it.
-Here are the unconditional models trained on FFHQ and AFHQ-dog:
-
- * 256x256 FFHQ: [ffhq_10m.pt](https://drive.google.com/file/d/117Y6Z6-Hg6TMZVIXMmgYbpZy7QvTXign/view?usp=sharing)
- * 256x256 AFHQ-dog: [afhq_dog_4m.pt](https://drive.google.com/file/d/14OG_o3aa8Hxmfu36IIRyOgRwEP6ngLdo/view?usp=sharing)
-
-These models have seen 10M and 4M images respectively.
+Refer to [ILVR](https://github.com/jychoi118/ilvr_adm)
 You may also try with models from [guided diffusion](https://github.com/openai/guided-diffusion).
 
 
