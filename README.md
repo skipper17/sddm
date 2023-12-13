@@ -9,7 +9,7 @@ We use [PyTorch-Resizer](https://github.com/assafshocher/PyTorch-Resizer) for re
 
 SDDM derives manifolds to make the distributions of adjacent time steps separable and decompose the score function or energy guidance into an image “denoising” part and a content “refinement” part. To refine the image in the same noise level, we equalize the refinement parts of the score function and energy guidance, which permits multiobjective optimization on the manifold. We also leverage the block adaptive instance normalization module to construct manifolds with lower dimensions but still concentrated with the perturbed reference image. SDDM outperforms existing SBDM-based methods with much fewer diffusion steps on several I2I benchmarks.
 
-![image](https://user-images.githubusercontent.com/36615789/133278340-48050da2-192b-4851-87ab-ba090545886a.png)
+<img width="1375" alt="image" src="https://github.com/skipper17/mycond_adm/assets/36984150/07b045d1-0fa8-4aec-9289-fd8e98a6392d">
 
 
 ## Download pre-trained models
